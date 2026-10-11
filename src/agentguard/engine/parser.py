@@ -76,4 +76,6 @@ def parse_source(source: str, path: Path | None = None) -> ParsedModule:
             line=line,
             col=col,
         ) from error
+    except ValueError as error:
+        raise ParseError(source_path, str(error)) from error
     return ParsedModule(source_path, tree, source, tuple(source.splitlines()))
