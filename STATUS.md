@@ -3,8 +3,8 @@
 ## Current position
 
 - Phase: 0 — Bootstrap
-- Step: 0.1 — Scaffold
-- Status: Scaffold implemented; dependency lock and checks are blocked by missing local tools
+- Step: 0.2 — Verification
+- Status: Complete; locked install and all checks pass
 
 ## Completed in Step 0.1
 
@@ -15,23 +15,26 @@
 - Bootstrap smoke test
 - MIT license, README, ignore rules, and LF line-ending policy
 - GitHub Actions workflow for Python 3.10, 3.11, and 3.12
+- Committed `uv.lock` with locked development tooling
+- Python 3.13 added to the CI matrix
+- Bootstrap specification clarified for lockfiles, line endings, and verification
 
-## Still required for Step 0.1 completion
+## Verified in Step 0.2
 
-- Install `uv` and `make` locally
-- Generate and commit `uv.lock`
-- Run `uv sync --all-extras`
-- Run `make check` and fix any findings
+- `uv sync --locked --all-extras`
+- `make install`
+- `make check`
+- `uv run --locked agentguard --version`
+- `uv run --locked python -m agentguard --version`
 
 ## Next
 
-After Step 0.1 is green and committed, proceed to Step 0.2 verification and
-then stop for approval before starting Phase 1.
+Phase 0 is complete. The next approved unit is Phase 1, Step 1.1: findings and
+Agent IR models with unit tests for dataclasses and fingerprints.
 
 ## Known issues
 
-- `uv.lock` has not been generated because `uv` is not installed locally.
-- `make check` has not run because `make` and the project development tools are
-  not installed locally.
-- Work is on `feature/phase-0-bootstrap`; no commit has been created because
-  the unit is not green yet.
+- `uv` is installed at `$HOME/.local/bin/uv`; shells must include that path or
+  start a new terminal before invoking it directly.
+- A parallel direct `uv run` verification briefly created an ignored project
+  `.venv`; the documented Makefile environment remains the supported path.

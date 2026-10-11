@@ -43,6 +43,10 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.ruff.lint.isort]
 known-first-party = ["agentguard"]
 
+[tool.ruff.format]
+# Specification snippets are design sketches, not executable Python.
+exclude = ["*.md"]
+
 [tool.mypy]
 files = ["src/agentguard", "tests"]
 mypy_path = ["src"]

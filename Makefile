@@ -6,20 +6,20 @@ export UV_LINK_MODE
 export UV_PROJECT_ENVIRONMENT
 
 install:
-	uv sync --all-extras
+	uv sync --locked --all-extras
 
 check: lint types test
 
 test:
-	uv run pytest
+	uv run --locked --all-extras pytest
 
 lint:
-	uv run ruff check .
-	uv run ruff format --check .
+	uv run --locked --all-extras ruff check .
+	uv run --locked --all-extras ruff format --check .
 
 fmt:
-	uv run ruff format .
-	uv run ruff check --fix .
+	uv run --locked --all-extras ruff check --fix .
+	uv run --locked --all-extras ruff format .
 
 types:
-	uv run mypy --strict src tests
+	uv run --locked --all-extras mypy --strict src tests
