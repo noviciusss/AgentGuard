@@ -3,7 +3,7 @@
 ## Current position
 
 - Phase: 1 — Core engine, IR, three rules
-- Step: 1.2 — Discovery, parsing, orchestration, and suppressions
+- Step: 1.3 — Rule base, registry, and fixture runner
 - Status: Complete; all checks pass
 
 ## Completed in Step 0.1
@@ -41,6 +41,17 @@
 - Edge-case tests for ignore precedence, path errors, encodings, suppressions,
   and equivalent sequential/parallel results
 
+## Completed in Step 1.3
+
+- Typed `Rule` and `RuleContext` contracts that consume normalized Agent IR
+- Rule descriptors with stable IDs, names, descriptions, and default severity
+- Duplicate/invalid rule registration checks
+- Deterministic rule selection with `AG00*`-style include and ignore patterns
+- Registry execution with finding validation, fingerprint finalization, and
+  global source-order sorting
+- Exact-line fixture marker parser and assertion helper for `# expect: AGxxx`
+  comments, ready for the first real rule fixtures
+
 ## Verified in Step 0.2
 
 - `uv sync --locked --all-extras`
@@ -62,12 +73,19 @@
 - Ruff lint and format checks passed for all 17 Python files
 - `mypy --strict`: no issues in 17 source files
 
+## Verified in Step 1.3
+
+- `make check` on Python 3.13.5: 31 tests passed, no warnings
+- Ruff lint and format checks passed for all 24 Python files
+- `mypy --strict`: no issues in 24 source files
+- `feature/phase-1-models` pushed to `origin`
+
 ## Next
 
-The next unit is Phase 1, Step 1.3: rule base class, registry, and the
-fixture-driven test runner. The analysis callback will later connect to this
-registry and the IR builder; framework analysis and `agentguard scan` are not
-implemented yet. CLI rendering of parse diagnostics belongs to Step 1.9.
+The next unit is Phase 1, Step 1.4: generic adapter and known-call tables for
+plain Python loops, retries, LLM calls, HTTP calls, and name resolution.
+Framework analysis and `agentguard scan` are not implemented yet. CLI
+rendering of parse diagnostics belongs to Step 1.9.
 
 ## Known issues
 
@@ -75,9 +93,6 @@ implemented yet. CLI rendering of parse diagnostics belongs to Step 1.9.
   start a new terminal before invoking it directly.
 - A parallel direct `uv run` verification briefly created an ignored project
   `.venv`; the documented Makefile environment remains the supported path.
-- The feature-branch push failed because HTTPS GitHub authentication is not
-  available. `gh` is also not installed. Git author identity is configured
-  locally, but it does not provide push authentication.
 - Checks have run locally on Python 3.13.5; the GitHub CI matrix has not run
   for these local commits yet.
 - Discovery reads `.gitignore` files within the scan root. User-global Git
