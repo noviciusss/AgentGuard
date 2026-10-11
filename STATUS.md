@@ -3,7 +3,7 @@
 ## Current position
 
 - Phase: 1 — Core engine, IR, three rules
-- Step: 1.3 — Rule base, registry, and fixture runner
+- Step: 1.4 — Generic adapter and known-call tables
 - Status: Complete; all checks pass
 
 ## Completed in Step 0.1
@@ -52,6 +52,19 @@
 - Exact-line fixture marker parser and assertion helper for `# expect: AGxxx`
   comments, ready for the first real rule fixtures
 
+## Completed in Step 1.4
+
+- Framework adapter interface and generic Python adapter
+- Known call table for requests, urllib, httpx, aiohttp, OpenAI, Anthropic, and
+  LangChain chat models
+- Import-alias and simple client assignment resolution
+- Literal keyword extraction and timeout-state inference, including client-level
+  timeout propagation
+- IR extraction for calls, bounded/unbounded loops, retry decorators, module
+  mutables, generic function nodes, mutable defaults, and concurrency fan-outs
+- Adapter tests covering aliases, client timeouts, retry bounds, loops, and
+  shared mutable concurrency shapes
+
 ## Verified in Step 0.2
 
 - `uv sync --locked --all-extras`
@@ -80,12 +93,17 @@
 - `mypy --strict`: no issues in 24 source files
 - `feature/phase-1-models` pushed to `origin`
 
+## Verified in Step 1.4
+
+- `make check` on Python 3.13.5: 34 tests passed, no warnings
+- Ruff lint and format checks passed for all 29 Python files
+- `mypy --strict`: no issues in 29 source files
+
 ## Next
 
-The next unit is Phase 1, Step 1.4: generic adapter and known-call tables for
-plain Python loops, retries, LLM calls, HTTP calls, and name resolution.
-Framework analysis and `agentguard scan` are not implemented yet. CLI
-rendering of parse diagnostics belongs to Step 1.9.
+The next unit is Phase 1, Step 1.5: LangGraph adapter and IR builder
+integration. Framework analysis and `agentguard scan` are not implemented yet.
+CLI rendering of parse diagnostics belongs to Step 1.9.
 
 ## Known issues
 
@@ -97,3 +115,5 @@ rendering of parse diagnostics belongs to Step 1.9.
   for these local commits yet.
 - Discovery reads `.gitignore` files within the scan root. User-global Git
   excludes and `.git/info/exclude` are not read.
+- Generic adapter call defaults are conservative and intentionally avoid
+  treating unresolved arbitrary `.invoke()` methods as LLM calls.

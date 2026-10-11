@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Literal, TypeAlias
@@ -101,6 +101,7 @@ class AgentNode:
     writes_state: set[str]
     call_sites: list[CallSite]
     tools: list[ToolDef]
+    mutable_default_args: set[str] = field(default_factory=set)
 
 
 @dataclass
