@@ -3,7 +3,7 @@
 ## Current position
 
 - Phase: 1 — Core engine, IR, three rules
-- Step: 1.4 — Generic adapter and known-call tables
+- Step: 1.5 — LangGraph adapter and IR builder
 - Status: Complete; all checks pass
 
 ## Completed in Step 0.1
@@ -65,6 +65,16 @@
 - Adapter tests covering aliases, client timeouts, retry bounds, loops, and
   shared mutable concurrency shapes
 
+## Completed in Step 1.5
+
+- LangGraph adapter based on the verified StateGraph API shape
+- StateGraph construction and compiled graph detection
+- Static and conditional edges, START/END entry and terminal handling
+- Named and function-derived nodes with node state read/write facts
+- Send-based and static-edge fan-out extraction
+- TypedDict-style state schemas with `Annotated` reducer and mutable-type facts
+- Adapter ordering and generic fallback through `IRBuilder`
+
 ## Verified in Step 0.2
 
 - `uv sync --locked --all-extras`
@@ -99,11 +109,18 @@
 - Ruff lint and format checks passed for all 29 Python files
 - `mypy --strict`: no issues in 29 source files
 
+## Verified in Step 1.5
+
+- `make check` on Python 3.13.5: 36 tests passed, no warnings
+- Ruff lint and format checks passed for all 32 Python files
+- `mypy --strict`: no issues in 32 source files
+
 ## Next
 
-The next unit is Phase 1, Step 1.5: LangGraph adapter and IR builder
-integration. Framework analysis and `agentguard scan` are not implemented yet.
-CLI rendering of parse diagnostics belongs to Step 1.9.
+The next unit is Phase 1, Step 1.6: AG003 missing-timeout rule and its
+fixture-driven tests. Framework analysis is now represented in IR, but
+`agentguard scan` is not implemented yet. CLI rendering of parse diagnostics
+belongs to Step 1.9.
 
 ## Known issues
 

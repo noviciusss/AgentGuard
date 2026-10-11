@@ -2,5 +2,6 @@
 
 from agentguard.adapters.base import FrameworkAdapter
 from agentguard.adapters.generic import GenericAdapter
+from agentguard.adapters.langgraph import LangGraphAdapter
 
-__all__ = ["FrameworkAdapter", "GenericAdapter"]
+__all__ = ["FrameworkAdapter", "GenericAdapter", "LangGraphAdapter"]
