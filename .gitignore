@@ -1,0 +1,28 @@
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+.venvs/
+
+# Build and coverage outputs
+*.egg-info/
+.coverage
+.coverage.*
+build/
+coverage.xml
+dist/
+htmlcov/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp

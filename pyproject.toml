@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentguard"
+dynamic = ["version"]
+description = "Static analysis for reliability, cost, and security bugs in AI agents"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [{ name = "Samarth" }]
+dependencies = [
+    "rich>=13,<15",
+    "typer>=0.12,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "hypothesis>=6,<7",
+    "mypy>=1.10,<2",
+    "pytest>=8,<9",
+    "ruff>=0.6,<1",
+]
+
+[project.scripts]
+agentguard = "agentguard.cli:main"
+
+[tool.hatch.version]
+path = "src/agentguard/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentguard"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agentguard"]
+
+[tool.mypy]
+files = ["src/agentguard", "tests"]
+mypy_path = ["src"]
+python_version = "3.10"
+strict = true
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
