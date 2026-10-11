@@ -54,10 +54,12 @@ agentguard/
   LICENSE                      # MIT
   Makefile
   pyproject.toml
+  uv.lock                      # committed dependency lockfile
   .gitignore
+  .gitattributes               # LF line-ending policy
   .github/workflows/ci.yml
   src/agentguard/
-    __init__.py                # __version__
+    __init__.py                # single source of truth for __version__
     __main__.py                # python -m agentguard
     cli/
       __init__.py              # typer app
@@ -109,9 +111,9 @@ agentguard/
 ## 3. Phase plan
 
 ### Phase 0: Bootstrap
-**Step 0.1** Create the scaffold: `pyproject.toml` (hatchling, src layout, console script `agentguard`, ruff + mypy + pytest config), `Makefile` (targets: `install`, `check`, `test`, `lint`, `fmt`, `types`), `.gitignore`, `README.md` stub, `LICENSE`, `STATUS.md`, CI workflow running `make check` on push/PR (Python 3.10, 3.11, 3.12).
-**Step 0.2** `agentguard --version` works; a trivial test passes; `make check` is green.
-**Done when:** fresh clone + `uv sync` + `make check` passes.
+**Step 0.1** Create the scaffold: `pyproject.toml` (hatchling, src layout, console script `agentguard`, ruff + mypy + pytest config), `Makefile` (targets: `install`, `check`, `test`, `lint`, `fmt`, `types`), `.gitignore`, `.gitattributes`, `README.md` stub, `LICENSE`, `STATUS.md`, committed `uv.lock`, and CI workflow running `make check` on push/PR (Python 3.10, 3.11, 3.12, 3.13). The scaffold includes a minimal package, `agentguard --version` implementation, and a bootstrap smoke test so the check target has test coverage from the first commit.
+**Step 0.2** Verify `agentguard --version`, `python -m agentguard --version`, a fresh locked install, and a green `make check`.
+**Done when:** fresh clone + `uv sync --locked --all-extras` + `make check` passes.
 
 ### Phase 1: Core engine, IR, three rules
 **Step 1.1** `findings.py` and `ir/models.py` (section 4, section 5). Unit tests for dataclasses and fingerprints.
