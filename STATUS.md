@@ -2,9 +2,9 @@
 
 ## Current position
 
-- Phase: 0 — Bootstrap
-- Step: 0.2 — Verification
-- Status: Complete; locked install and all checks pass
+- Phase: 1 — Core engine, IR, three rules
+- Step: 1.1 — Findings and Agent IR models
+- Status: Complete; all checks pass
 
 ## Completed in Step 0.1
 
@@ -19,6 +19,15 @@
 - Python 3.13 added to the CI matrix
 - Bootstrap specification clarified for lockfiles, line endings, and verification
 
+## Completed in Step 1.1
+
+- Severity, confidence, location, finding, and future-fix models
+- Stable finding ordering by file, line, column, and rule identifier
+- Line-number-independent SHA-256 finding fingerprints
+- Normalized Agent IR enums and dataclasses for calls, loops, graphs, state,
+  tools, fan-outs, module facts, and whole systems
+- Unit tests for finding defaults, ordering, fingerprints, and IR relationships
+
 ## Verified in Step 0.2
 
 - `uv sync --locked --all-extras`
@@ -27,10 +36,17 @@
 - `uv run --locked agentguard --version`
 - `uv run --locked python -m agentguard --version`
 
+## Verified in Step 1.1
+
+- `make check`
+- 6 tests passed
+- `ruff check` and format verification passed
+- `mypy --strict` passed for 11 source files
+
 ## Next
 
-Phase 0 is complete. The next approved unit is Phase 1, Step 1.1: findings and
-Agent IR models with unit tests for dataclasses and fingerprints.
+The next unit is Phase 1, Step 1.2: discovery, parsing, scan orchestration, and
+inline suppression comments.
 
 ## Known issues
 
