@@ -3,13 +3,13 @@
 from pathlib import Path
 
 import pytest
+
+from agentguard.findings import Confidence, Finding, Location, Severity
 from tests.fixture_support import (
     assert_fixture_findings,
     fixture_paths,
     read_expectations,
 )
-
-from agentguard.findings import Confidence, Finding, Location, Severity
 
 
 def test_expectation_parser_keeps_exact_lines(tmp_path: Path) -> None:
