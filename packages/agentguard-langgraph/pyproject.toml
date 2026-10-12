@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentguard-langgraph"
+version = "0.1.0"
+description = "LangGraph adapter for AgentGuard"
+requires-python = ">=3.10"
+dependencies = ["agentguard-core>=0.1", "typing_extensions>=4,<5"]
+
+[project.entry-points.agentguard]
+langgraph = "agentguard_langgraph:Plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentguard_langgraph"]
