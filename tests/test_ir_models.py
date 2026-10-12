@@ -94,3 +94,23 @@ def test_ir_models_preserve_graph_relationships() -> None:
 def test_ir_enum_values_are_stable_strings() -> None:
     assert Capability.FS_WRITE.value == "fs_write"
     assert DataSource.USER_INPUT.value == "user_input"
+
+
+def test_phase_three_ir_fields_default_to_unknown_or_empty() -> None:
+    loc = Location(Path("agent.py"), 1, 0, 1, 1)
+    graph = AgentGraph(
+        name="graph",
+        framework="generic",
+        nodes={},
+        edges=[],
+        entry=None,
+        terminals=set(),
+        state_keys={},
+        recursion_limit=None,
+        fan_outs=[],
+        loc=loc,
+    )
+
+    assert graph.iteration_limit is None
+    assert graph.cycle_nodes == set()
+    assert graph.unreachable_nodes == set()

@@ -38,6 +38,49 @@ class DataSource(str, Enum):
     UNKNOWN = "unknown"
 
 
+class TaintSink(str, Enum):
+    """A destination where untrusted or generated data needs review."""
+
+    SYSTEM_PROMPT = "system_prompt"
+    EVAL = "eval"
+    EXEC = "exec"
+    SUBPROCESS = "subprocess"
+    SQL = "sql"
+    FILE_PATH = "file_path"
+
+
+@dataclass(frozen=True)
+class TaintFlow:
+    """A conservative intra-function source-to-sink dataflow fact."""
+
+    loc: Location
+    source: DataSource
+    sink: TaintSink
+    function: str | None
+    value_name: str | None
+
+
+@dataclass(frozen=True)
+class SecretFact:
+    """A likely hardcoded credential detected in source."""
+
+    loc: Location
+    name: str
+    kind: str
+
+
+@dataclass(frozen=True)
+class ExceptionFact:
+    """An exception handler that may hide a tool failure."""
+
+    loc: Location
+    function: str | None
+    catches: str | None
+    has_raise: bool
+    has_logging: bool
+    has_fallback: bool
+
+
 @dataclass(frozen=True)
 class KwargInfo:
     """Information about a keyword argument observed at a call site."""
@@ -57,6 +100,9 @@ class CallSite:
     has_timeout: bool | None
     enclosing_function: str | None
     in_loop: bool
+    model_name: str | None = None
+    max_tokens: int | None = None
+    data_sources: frozenset[DataSource] = frozenset()
 
 
 @dataclass
@@ -102,6 +148,7 @@ class AgentNode:
     call_sites: list[CallSite]
     tools: list[ToolDef]
     mutable_default_args: set[str] = field(default_factory=set)
+    protected_writes: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -155,6 +202,9 @@ class AgentGraph:
     recursion_limit: int | None
     fan_outs: list[FanOut]
     loc: Location
+    iteration_limit: int | None = None
+    cycle_nodes: set[str] = field(default_factory=set)
+    unreachable_nodes: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -167,6 +217,10 @@ class ModuleFacts:
     graphs: list[AgentGraph]
     module_mutables: dict[str, Location]
     imports: dict[str, str]
+    taint_flows: list[TaintFlow] = field(default_factory=list)
+    secrets: list[SecretFact] = field(default_factory=list)
+    exception_facts: list[ExceptionFact] = field(default_factory=list)
+    state_growths: list[Location] = field(default_factory=list)
 
 
 @dataclass
