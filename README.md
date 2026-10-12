@@ -1,10 +1,11 @@
 # AgentGuard
 
-AgentGuard is a static analysis CLI for AI agent codebases. It is designed to
-find reliability, cost, and security bugs in agent graphs, tool calls, retries,
-and LLM calls before an agent runs.
+AgentGuard is a static analysis CLI for AI agent codebases. It finds reliability,
+cost, and security bugs in agent graphs, tool calls, retries, and LLM calls
+before an agent runs.
 
-The project is currently in the Phase 0 bootstrap stage.
+The project currently ships the Phase 1 core engine, normalized Agent IR,
+generic and LangGraph adapters, and the AG001–AG003 rules.
 
 ## Development setup
 
@@ -28,9 +29,10 @@ export UV_PROJECT_ENVIRONMENT="$HOME/.venvs/agentguard"
 uv sync --locked --all-extras
 ```
 
-Run the complete local check suite with:
+Install the locked environment and run the complete local check suite with:
 
 ```bash
+uv sync --locked --all-extras
 make check
 ```
 
@@ -42,14 +44,56 @@ targets include the development dependencies automatically.
 Keep `uv.lock` in version control. For intentional dependency updates, run
 `uv lock --upgrade`, review the lockfile changes, and run `make check`.
 
-The initial CLI supports a version check:
+## Quick start
+
+Check the installed version:
 
 ```bash
 uv run --locked agentguard --version
 uv run --locked python -m agentguard --version
 ```
 
-Scanning commands and the analysis engine will be added in later phases.
+Scan the bundled examples without failing the shell command on findings:
+
+```bash
+uv run --locked agentguard scan examples/ --fail-on never
+```
+
+The support bot and plain Python agent intentionally contain findings. The
+clean agent should produce no findings:
+
+```bash
+uv run --locked agentguard scan examples/clean_agent --format json --fail-on never
+```
+
+List the built-in rules or read a rule's remediation guidance:
+
+```bash
+uv run --locked agentguard rules
+uv run --locked agentguard explain AG003
+```
+
+Useful scan options include:
+
+```text
+agentguard scan [PATHS...] --format text|json
+    --select AG001,AG00* --ignore AG003
+    --min-severity info|warning|error
+    --min-confidence low|medium|high
+    --fail-on error|warning|never
+    --jobs N --output FILE --no-cache
+```
+
+The scanner parses source without importing or executing it. A syntax error is
+reported as a warning and the remaining files continue to scan. Findings are
+deterministically sorted and can be suppressed inline:
+
+```python
+requests.get(url)  # agentguard: ignore[AG003] reason: gateway adds timeout
+```
+
+See [the architecture guide](docs/architecture.md) and the individual pages in
+[`docs/rules/`](docs/rules/) for the IR pipeline and rule-specific guidance.
 
 ## License
 
