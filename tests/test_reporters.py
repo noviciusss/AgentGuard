@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from agentguard.findings import Confidence, Finding, Location, Severity
-from agentguard.reporters import JsonReporter, TextReporter
+from agentguard.reporters import JsonReporter, SarifReporter, TextReporter
 
 
 def finding() -> Finding:
@@ -50,3 +50,71 @@ def test_json_reporter_snapshot() -> None:
 ]
 """
     )
+
+
+def test_sarif_reporter_snapshot() -> None:
+    assert (
+        SarifReporter().render([finding()])
+        == """{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "results": [
+        {
+          "level": "warning",
+          "locations": [
+            {
+              "message": {
+                "text": "request has no timeout"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent.py"
+                },
+                "region": {
+                  "endColumn": 26,
+                  "endLine": 4,
+                  "startColumn": 9,
+                  "startLine": 4
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "request has no timeout"
+          },
+          "properties": {
+            "confidence": "high",
+            "suggestion": "pass timeout=30",
+            "why": "the connection can hang"
+          },
+          "ruleId": "AG003"
+        }
+      ],
+      "tool": {
+        "driver": {
+          "informationUri": "https://github.com/agentguard/agentguard",
+          "name": "AgentGuard",
+          "rules": [
+            {
+              "id": "AG003",
+              "shortDescription": {
+                "text": "AG003"
+              }
+            }
+          ],
+          "version": "0.1.0"
+        }
+      }
+    }
+  ],
+  "version": "2.1.0"
+}
+"""
+    )
+
+
+def test_sarif_omits_empty_fingerprint() -> None:
+    rendered = SarifReporter().render([finding()])
+
+    assert '"fingerprints"' not in rendered

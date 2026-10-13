@@ -1,6 +1,7 @@
 """Human-readable text reporter."""
 
 from collections.abc import Iterable
+from typing import ClassVar
 
 from agentguard.findings import Finding, sort_findings
 from agentguard.reporters.base import Reporter
@@ -8,6 +9,8 @@ from agentguard.reporters.base import Reporter
 
 class TextReporter(Reporter):
     """Render one finding with why and fix guidance."""
+
+    format_name: ClassVar[str] = "text"
 
     def render(self, findings: Iterable[Finding]) -> str:
         """Return findings in stable source order."""

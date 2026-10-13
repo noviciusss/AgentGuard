@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Iterable
+from typing import ClassVar
 
 from agentguard.findings import Finding, sort_findings
 from agentguard.reporters.base import Reporter
@@ -9,6 +10,8 @@ from agentguard.reporters.base import Reporter
 
 class JsonReporter(Reporter):
     """Render findings as a stable JSON array."""
+
+    format_name: ClassVar[str] = "json"
 
     def render(self, findings: Iterable[Finding]) -> str:
         """Return a pretty-printed JSON array with stable key ordering."""
@@ -18,7 +21,7 @@ class JsonReporter(Reporter):
 
 def _serialize(finding: Finding) -> dict[str, object]:
     location = finding.loc
-    return {
+    payload: dict[str, object] = {
         "confidence": finding.confidence.value,
         "fingerprint": finding.fingerprint,
         "location": {
@@ -44,3 +47,8 @@ def _serialize(finding: Finding) -> dict[str, object]:
         "suggestion": finding.suggestion,
         "why": finding.why,
     }
+    if finding.tags:
+        payload["tags"] = list(finding.tags)
+    if finding.metadata:
+        payload["metadata"] = dict(finding.metadata)
+    return payload
