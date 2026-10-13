@@ -8,11 +8,15 @@ from agentguard.ir.models import (
     Capability,
     DataSource,
     Edge,
+    ExceptionFact,
     FanOut,
     KwargInfo,
     Loop,
     ModuleFacts,
+    SecretFact,
     StateKey,
+    TaintFlow,
+    TaintSink,
     ToolDef,
 )
 
@@ -23,6 +27,7 @@ __all__ = [
     "CallSite",
     "Capability",
     "DataSource",
+    "ExceptionFact",
     "Edge",
     "FanOut",
     "KwargInfo",
@@ -30,4 +35,7 @@ __all__ = [
     "ModuleFacts",
     "StateKey",
     "ToolDef",
+    "SecretFact",
+    "TaintFlow",
+    "TaintSink",
 ]

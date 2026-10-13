@@ -103,6 +103,7 @@ class CallSite:
     model_name: str | None = None
     max_tokens: int | None = None
     data_sources: frozenset[DataSource] = frozenset()
+    approval_gate: bool = False
 
 
 @dataclass
@@ -221,6 +222,7 @@ class ModuleFacts:
     secrets: list[SecretFact] = field(default_factory=list)
     exception_facts: list[ExceptionFact] = field(default_factory=list)
     state_growths: list[Location] = field(default_factory=list)
+    call_graph: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
 
 @dataclass

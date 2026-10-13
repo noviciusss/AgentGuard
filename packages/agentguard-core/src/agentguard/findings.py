@@ -51,6 +51,8 @@ class Finding:
     related: tuple[Location, ...] = ()
     fingerprint: str = ""
     fix: Fix | None = None
+    tags: tuple[str, ...] = ()
+    metadata: tuple[tuple[str, str], ...] = ()
 
 
 def finding_sort_key(finding: Finding) -> tuple[str, int, int, str]:
