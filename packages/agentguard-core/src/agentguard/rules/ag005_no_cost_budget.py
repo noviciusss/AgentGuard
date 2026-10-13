@@ -18,7 +18,13 @@ class NoCostBudgetRule(Rule):
     def check(self, context: RuleContext) -> Iterable[Finding]:
         for module in context.system.modules:
             for call in module.call_sites:
-                if call.kind == "llm" and call.in_loop and call.max_tokens is None:
+                if (
+                    call.kind == "llm"
+                    and call.in_loop
+                    and call.max_tokens is None
+                    and "max_tokens" not in call.kwargs
+                    and "**" not in call.kwargs
+                ):
                     yield finding(
                         self.rule_id,
                         call.loc,

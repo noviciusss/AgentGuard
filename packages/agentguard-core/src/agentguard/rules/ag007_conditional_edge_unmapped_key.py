@@ -19,7 +19,11 @@ class ConditionalEdgeUnmappedKeyRule(Rule):
         for module in context.system.modules:
             for graph in module.graphs:
                 for edge in graph.edges:
-                    if edge.conditional and edge.target is None:
+                    if (
+                        edge.conditional
+                        and edge.target is None
+                        and edge.source not in graph.terminals
+                    ):
                         yield finding(
                             self.rule_id,
                             edge.loc,

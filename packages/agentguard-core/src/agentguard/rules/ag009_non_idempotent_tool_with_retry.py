@@ -22,6 +22,7 @@ class NonIdempotentToolWithRetryRule(Rule):
                     call.kind == "tool"
                     and call.in_loop
                     and dangerous_tool_name(call.qualified_name)
+                    and "idempotency_key" not in call.kwargs
                 ):
                     yield finding(
                         self.rule_id,

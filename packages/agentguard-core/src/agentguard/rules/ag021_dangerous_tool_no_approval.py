@@ -18,7 +18,11 @@ class DangerousToolNoApprovalRule(Rule):
     def check(self, context: RuleContext) -> Iterable[Finding]:
         for module in context.system.modules:
             for call in module.call_sites:
-                if call.kind == "tool" and dangerous_tool_name(call.qualified_name):
+                if (
+                    call.kind == "tool"
+                    and dangerous_tool_name(call.qualified_name)
+                    and not call.approval_gate
+                ):
                     yield finding(
                         self.rule_id,
                         call.loc,
