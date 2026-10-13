@@ -7,6 +7,7 @@ from agentguard.adapters.crewai import CrewAIAdapter
 from agentguard.adapters.generic import GenericAdapter
 from agentguard.plugins.spec import hookimpl
 from agentguard.reporters.json_reporter import JsonReporter
+from agentguard.reporters.sarif import SarifReporter
 from agentguard.reporters.text import TextReporter
 from agentguard.rules.ag001_unbounded_retries import UnboundedRetriesRule
 from agentguard.rules.ag002_shared_mutable_fanout import SharedMutableFanoutRule
@@ -65,4 +66,4 @@ class BuiltinPlugin:
 
     @hookimpl
     def register_reporters(self) -> list[type]:
-        return [TextReporter, JsonReporter]
+        return [TextReporter, JsonReporter, SarifReporter]

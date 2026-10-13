@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentguard-llm-triage"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = ["agentguard>=0.1"]
+
+[project.entry-points.agentguard]
+llm_triage = "agentguard_llm_triage:Plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentguard_llm_triage"]

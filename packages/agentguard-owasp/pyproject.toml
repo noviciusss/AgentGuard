@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentguard-owasp"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = ["agentguard>=0.1"]
+
+[project.entry-points.agentguard]
+owasp = "agentguard_owasp:Plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentguard_owasp"]

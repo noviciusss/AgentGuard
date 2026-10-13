@@ -133,7 +133,23 @@ def test_entry_point_plugins_are_loaded_and_bad_plugins_are_reported() -> None:
 def test_default_manager_registers_builtins_in_adapter_priority_order() -> None:
     manager = PluginManager.default(discover=False)
 
-    assert [rule.rule_id for rule in manager.rules()] == ["AG001", "AG002", "AG003"]
+    assert [rule.rule_id for rule in manager.rules()] == [
+        "AG001",
+        "AG002",
+        "AG003",
+        "AG004",
+        "AG005",
+        "AG006",
+        "AG007",
+        "AG008",
+        "AG009",
+        "AG010",
+        "AG011",
+        "AG020",
+        "AG021",
+        "AG022",
+        "AG023",
+    ]
     assert [adapter.name for adapter in manager.adapters()] == [
         "crewai",
         "autogen",
