@@ -63,6 +63,7 @@ class GenericAdapter(FrameworkAdapter):
             secrets=taint.secrets,
             exception_facts=taint.exceptions,
             state_growths=taint.state_growths,
+            call_graph=taint.call_graph,
         )
 
 
@@ -92,6 +93,7 @@ class _GenericVisitor(ast.NodeVisitor):
         self.loop_stack: list[list[CallSite]] = []
         self.fan_outs: list[FanOut] = []
         self.lock_depth = 0
+        self.approval_depth = 0
         self._top_level = True
 
     def module_facts(self) -> ModuleFacts:
@@ -314,6 +316,20 @@ class _GenericVisitor(ast.NodeVisitor):
         if lock_context:
             self.lock_depth -= 1
 
+    def visit_If(self, node: ast.If) -> None:
+        approval = any(
+            marker in ast.unparse(node.test).lower()
+            for marker in {"approv", "human", "confirm", "consent"}
+        )
+        if approval:
+            self.approval_depth += 1
+        for statement in node.body:
+            self.visit(statement)
+        for statement in node.orelse:
+            self.visit(statement)
+        if approval:
+            self.approval_depth -= 1
+
     def _call_site(
         self,
         node: ast.Call,
@@ -338,6 +354,7 @@ class _GenericVisitor(ast.NodeVisitor):
             in_loop=bool(self.loop_stack),
             model_name=_literal_kwarg(kwargs, "model"),
             max_tokens=_literal_int_kwarg(kwargs, "max_tokens"),
+            approval_gate=bool(self.approval_depth),
         )
 
     def _attach_call(self, site: CallSite) -> None:
@@ -714,6 +731,5 @@ def _fan_out_branches(node: ast.Call) -> list[str]:
 
 
 def _is_tool_call(qualified_name: str) -> bool:
-    return qualified_name.endswith(".invoke_tool") or qualified_name.endswith(
-        ".run_tool"
-    )
+    leaf = qualified_name.rsplit(".", 1)[-1].lower()
+    return leaf in {"invoke_tool", "run_tool"} or leaf.endswith("_tool")

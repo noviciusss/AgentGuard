@@ -189,7 +189,7 @@ def _unreachable_nodes(
     nodes: dict[str, AgentNode], edges: list[Edge], entry: str | None
 ) -> set[str]:
     if entry is None or entry not in nodes:
-        return set(nodes)
+        return set()
     adjacency: dict[str, set[str]] = {name: set() for name in nodes}
     for edge in edges:
         if edge.target in nodes and edge.source in nodes:
