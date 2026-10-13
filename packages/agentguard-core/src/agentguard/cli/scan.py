@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import tokenize
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -23,10 +24,17 @@ from agentguard.engine.parser import ParsedModule, ParseError, parse_file
 from agentguard.engine.runner import ParseDiagnostic, ScanResult
 from agentguard.engine.suppression import parse_suppressions
 from agentguard.findings import Confidence, Finding, Severity, sort_findings
+from agentguard.fixes import (
+    FixEngine,
+    FixError,
+    preview_model_pin_fixes,
+    preview_recursion_limit_fixes,
+    preview_timeout_fixes,
+)
 from agentguard.ir.builder import IRBuilder
 from agentguard.ir.models import AgentSystem
 from agentguard.plugins.manager import PluginManager
-from agentguard.reporters import JsonReporter, TextReporter
+from agentguard.reporters.base import Reporter
 from agentguard.rules.base import RuleContext
 from agentguard.rules.registry import RuleRegistry
 
@@ -90,6 +98,7 @@ def analyze_project(
         findings=tuple(sort_findings(findings)),
         scanned_files=tuple(files),
         parse_errors=tuple(parse_errors),
+        system=system,
     )
 
 
@@ -111,7 +120,8 @@ def scan_command(
         list[Path] | None, typer.Argument(help="Files or directories to scan.")
     ] = None,
     report_format: Annotated[
-        Literal["text", "json"], typer.Option("--format", help="Report format.")
+        Literal["text", "json", "sarif"],
+        typer.Option("--format", help="Report format."),
     ] = "text",
     output: Annotated[
         Path | None, typer.Option("--output", help="Write report to a file.")
@@ -138,6 +148,16 @@ def scan_command(
     baseline: Annotated[
         Path | None, typer.Option("--baseline", help="Ignore findings in a baseline.")
     ] = None,
+    fix_dry_run: Annotated[
+        bool, typer.Option("--fix-dry-run", help="Print safe autofix diffs.")
+    ] = False,
+    fix: Annotated[
+        bool, typer.Option("--fix", help="Apply safe autofixes to source files.")
+    ] = False,
+    fix_timeout: Annotated[
+        int,
+        typer.Option("--fix-timeout", min=1, help="Timeout seconds for AG003 fixes."),
+    ] = 30,
     no_cache: Annotated[
         bool, typer.Option("--no-cache", help="Disable cache (reserved).")
     ] = False,
@@ -156,6 +176,8 @@ def scan_command(
             fail_on=fail_on,
             jobs=jobs,
         )
+        if fix_dry_run and fix:
+            raise ConfigError("--fix-dry-run and --fix cannot be used together")
         result = analyze_project(scan_paths, config, root=scan_root)
         if baseline is not None:
             baseline_data = load_baseline(baseline)
@@ -163,7 +185,21 @@ def scan_command(
                 result,
                 findings=tuple(filter_baselined(result.findings, baseline_data)),
             )
-    except (BaselineError, ConfigError, FileNotFoundError, ValueError) as error:
+        fix_diffs = _run_fixes(
+            result.findings,
+            root=scan_root,
+            dry_run=fix_dry_run,
+            apply=fix,
+            timeout=fix_timeout,
+            model_map=config.fix.model,
+        )
+    except (
+        BaselineError,
+        ConfigError,
+        FixError,
+        FileNotFoundError,
+        ValueError,
+    ) as error:
         typer.echo(str(error), err=True)
         raise typer.Exit(code=2) from error
 
@@ -172,7 +208,9 @@ def scan_command(
             f"warning: skipped {diagnostic.path}: {diagnostic.message}",
             err=True,
         )
-    reporter = JsonReporter() if report_format == "json" else TextReporter()
+    if fix_diffs:
+        typer.echo("".join(fix_diffs), nl=False)
+    reporter = _reporter(report_format, PluginManager.default())
     rendered = reporter.render(result.findings)
     if output is not None:
         output.write_text(rendered, encoding="utf-8")
@@ -185,6 +223,66 @@ def _rule_context(
     system: AgentSystem, root: Path, sources: dict[Path, str]
 ) -> RuleContext:
     return RuleContext(system, root=root, sources=sources)
+
+
+def _reporter(report_format: str, manager: PluginManager) -> Reporter:
+    for reporter_class in manager.reporters():
+        if reporter_class.format_name == report_format:
+            return reporter_class()
+    raise ConfigError(f"reporter format is not installed: {report_format}")
+
+
+def _run_fixes(
+    findings: tuple[Finding, ...],
+    *,
+    root: Path,
+    dry_run: bool,
+    apply: bool,
+    timeout: int,
+    model_map: dict[str, str],
+) -> list[str]:
+    if not dry_run and not apply:
+        return []
+    by_file: dict[Path, list[Finding]] = {}
+    for finding in findings:
+        if finding.rule_id in {"AG003", "AG004"}:
+            by_file.setdefault(root / finding.loc.file, []).append(finding)
+    diffs: list[str] = []
+    engine = FixEngine()
+    for path in sorted(by_file, key=lambda item: item.as_posix()):
+        with tokenize.open(path) as stream:
+            source = stream.read()
+        current_source = source
+        timeout_result = preview_timeout_fixes(
+            path, current_source, by_file[path], timeout
+        )
+        recursion_result = preview_recursion_limit_fixes(
+            path,
+            timeout_result.after if timeout_result is not None else current_source,
+            by_file[path],
+            25,
+        )
+        recursion_source = (
+            recursion_result.after
+            if recursion_result is not None
+            else (
+                timeout_result.after if timeout_result is not None else current_source
+            )
+        )
+        model_result = preview_model_pin_fixes(
+            path, recursion_source, by_file[path], model_map
+        )
+        for result in (timeout_result, recursion_result, model_result):
+            if result is None:
+                continue
+            if not result.changed:
+                continue
+            current_source = result.after
+            if apply:
+                engine.apply(result)
+            if dry_run:
+                diffs.append(result.diff)
+    return diffs
 
 
 def _root_for_paths(paths: list[Path]) -> Path:

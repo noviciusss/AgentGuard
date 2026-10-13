@@ -58,6 +58,88 @@ def test_scan_json_and_fail_on_never(tmp_path: Path) -> None:
     assert '"rule_id": "AG003"' in result.stdout
 
 
+def test_scan_sarif_output(tmp_path: Path) -> None:
+    source = tmp_path / "agent.py"
+    source.write_text(
+        'import requests\nrequests.get("https://example.com")\n',
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["scan", str(source), "--format", "sarif", "--fail-on", "never"],
+    )
+
+    assert result.exit_code == 0
+    assert '"version": "2.1.0"' in result.stdout
+    assert '"ruleId": "AG003"' in result.stdout
+
+
+def test_scan_fix_dry_run_prints_diff_without_writing(tmp_path: Path) -> None:
+    source = tmp_path / "agent.py"
+    original = 'import requests\nrequests.get("https://example.com")\n'
+    source.write_text(original, encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "scan",
+            str(source),
+            "--fix-dry-run",
+            "--fix-timeout",
+            "12",
+            "--fail-on",
+            "never",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert '+requests.get("https://example.com", timeout = 12)' in result.stdout
+    assert source.read_text(encoding="utf-8") == original
+
+
+def test_scan_fix_applies_supported_ag003_transform(tmp_path: Path) -> None:
+    source = tmp_path / "agent.py"
+    source.write_text(
+        'import requests\nrequests.get("https://example.com")\n',
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["scan", str(source), "--fix", "--fail-on", "never"],
+    )
+
+    assert result.exit_code == 0
+    assert "timeout = 30" in source.read_text(encoding="utf-8")
+
+
+def test_scan_fix_dry_run_applies_supported_ag004_transform(tmp_path: Path) -> None:
+    source = tmp_path / "graph.py"
+    original = """from langgraph.graph import START, StateGraph
+
+def node(state):
+    return state
+
+builder = StateGraph(dict)
+builder.add_node("node", node)
+builder.add_edge(START, "node")
+builder.add_edge("node", "node")
+graph = builder.compile()
+graph.invoke({})
+"""
+    source.write_text(original, encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["scan", str(source), "--fix-dry-run", "--fail-on", "never"],
+    )
+
+    assert result.exit_code == 0
+    assert '"recursion_limit": 25' in result.stdout
+    assert source.read_text(encoding="utf-8") == original
+
+
 def test_scan_bad_config_returns_usage_error(tmp_path: Path) -> None:
     (tmp_path / "agentguard.toml").write_text(
         "unknown = true\n",

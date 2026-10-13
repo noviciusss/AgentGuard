@@ -28,6 +28,15 @@ def test_load_config_from_pyproject(tmp_path: Path) -> None:
     assert config.fail_on == FailOn.NEVER
 
 
+def test_load_config_reads_model_fix_mappings(tmp_path: Path) -> None:
+    (tmp_path / "agentguard.toml").write_text(
+        '[fix.model]\n"gpt-4" = "gpt-4-2024-08-06"\n',
+        encoding="utf-8",
+    )
+
+    assert load_config(tmp_path).fix.model == {"gpt-4": "gpt-4-2024-08-06"}
+
+
 def test_load_config_from_agentguard_toml_and_rejects_extra(tmp_path: Path) -> None:
     config_path = tmp_path / "agentguard.toml"
     config_path.write_text(

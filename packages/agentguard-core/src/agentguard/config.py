@@ -22,6 +22,12 @@ class FailOn(str, Enum):
     NEVER = "never"
 
 
+class FixConfig(BaseModel):
+    """Explicit mappings used by safe autofixes."""
+
+    model: dict[str, str] = Field(default_factory=dict)
+
+
 class AgentGuardConfig(BaseModel):
     """All scan configuration with safe defaults."""
 
@@ -36,6 +42,7 @@ class AgentGuardConfig(BaseModel):
     fail_on: FailOn = FailOn.ERROR
     jobs: int = Field(default=1, ge=1)
     severity: dict[str, Severity] = Field(default_factory=dict)
+    fix: FixConfig = Field(default_factory=FixConfig)
 
 
 class ConfigError(ValueError):

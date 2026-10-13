@@ -12,6 +12,7 @@ from agentguard.engine.discovery import discover_python_files
 from agentguard.engine.parser import ParsedModule, ParseError, parse_file
 from agentguard.engine.suppression import filter_suppressed, parse_suppressions
 from agentguard.findings import Finding, sort_findings
+from agentguard.ir.models import AgentSystem
 
 Analyzer: TypeAlias = Callable[[ParsedModule], Iterable[Finding]]
 
@@ -33,6 +34,7 @@ class ScanResult:
     findings: tuple[Finding, ...]
     scanned_files: tuple[Path, ...]
     parse_errors: tuple[ParseDiagnostic, ...]
+    system: AgentSystem | None = None
 
 
 @dataclass(frozen=True)
