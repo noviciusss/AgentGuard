@@ -22,4 +22,4 @@ fmt:
 	uv run --locked --all-extras ruff format .
 
 types:
-	uv run --locked --all-extras mypy --strict packages/agentguard-core/src packages/agentguard-langgraph/src tests
+	uv run --locked --all-extras mypy --strict packages/agentguard-core/src packages/agentguard-langgraph/src packages/agentguard-graph/src packages/agentguard-owasp/src packages/agentguard-llm-triage/src packages/agentguard-trace/src tests

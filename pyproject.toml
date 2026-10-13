@@ -11,6 +11,7 @@ license = { file = "LICENSE" }
 requires-python = ">=3.10"
 authors = [{ name = "Samarth" }]
 dependencies = [
+    "libcst>=1.6,<2",
     "pluggy>=1.5,<2",
     "pydantic>=2,<3",
     "rich>=13,<15",
@@ -31,6 +32,10 @@ agentguard = "agentguard.cli:main"
 
 [project.entry-points.agentguard]
 langgraph = "agentguard_langgraph:Plugin"
+graph = "agentguard_graph:Plugin"
+owasp = "agentguard_owasp:Plugin"
+llm_triage = "agentguard_llm_triage:Plugin"
+trace = "agentguard_trace:Plugin"
 
 [tool.hatch.version]
 path = "packages/agentguard-core/src/agentguard/__init__.py"
@@ -39,12 +44,24 @@ path = "packages/agentguard-core/src/agentguard/__init__.py"
 packages = [
     "packages/agentguard-core/src/agentguard",
     "packages/agentguard-langgraph/src/agentguard_langgraph",
+    "packages/agentguard-graph/src/agentguard_graph",
+    "packages/agentguard-owasp/src/agentguard_owasp",
+    "packages/agentguard-llm-triage/src/agentguard_llm_triage",
+    "packages/agentguard-trace/src/agentguard_trace",
 ]
 
 [tool.ruff]
 target-version = "py310"
 line-length = 88
-src = ["packages/agentguard-core/src", "packages/agentguard-langgraph/src", "tests"]
+src = [
+    "packages/agentguard-core/src",
+    "packages/agentguard-langgraph/src",
+    "packages/agentguard-graph/src",
+    "packages/agentguard-owasp/src",
+    "packages/agentguard-llm-triage/src",
+    "packages/agentguard-trace/src",
+    "tests",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
@@ -57,9 +74,24 @@ known-first-party = ["agentguard"]
 exclude = ["*.md"]
 
 [tool.mypy]
-files = ["packages/agentguard-core/src/agentguard", "packages/agentguard-langgraph/src", "tests"]
+files = [
+    "packages/agentguard-core/src/agentguard",
+    "packages/agentguard-langgraph/src",
+    "packages/agentguard-graph/src",
+    "packages/agentguard-owasp/src",
+    "packages/agentguard-llm-triage/src",
+    "packages/agentguard-trace/src",
+    "tests",
+]
 exclude = "(^|/)tests/fixtures/"
-mypy_path = ["packages/agentguard-core/src", "packages/agentguard-langgraph/src"]
+mypy_path = [
+    "packages/agentguard-core/src",
+    "packages/agentguard-langgraph/src",
+    "packages/agentguard-graph/src",
+    "packages/agentguard-owasp/src",
+    "packages/agentguard-llm-triage/src",
+    "packages/agentguard-trace/src",
+]
 python_version = "3.10"
 strict = true
 

@@ -2,9 +2,9 @@
 
 ## Current position
 
-- Phase: 2 — Plugin system
-- Step: 2.5 — package boundaries and external plugin acceptance
-- Status: Phase 2 complete; Phase 3 remains in progress
+- Phase: 5 — Intelligence (optional plugins)
+- Step: same-file inter-procedural taint propagation
+- Status: implementation complete; full verification follows below
 
 ## Completed in Step 0.1
 
@@ -311,10 +311,192 @@ Phase 1 findings rather than parser or adapter crashes.
 - A separately discovered external plugin contributes rule `AG998`
 - `agentguard-core` and `agentguard-langgraph` both build successfully
 
+## Completed in Phase 3
+
+- Extended the Agent IR with graph cycles, unreachable nodes, iteration limits,
+  model/token metadata, approval gates, exception facts, state-growth facts,
+  taint flows, and secret facts
+- Added conservative CrewAI and AutoGen adapters with `max_iter` and
+  `max_round` normalization
+- Added intra-function taint tracking for user input, tool output, LLM output,
+  environment values, execution sinks, prompt sinks, and likely credentials
+- Added AG004–AG011 and AG020–AG023 with documentation and fixture coverage
+- Added 36 Phase 3 fixture tests covering bad, good, and edge cases
+- Added Phase 3 integration tests for graph, cost, taint, tool, and secret paths
+- Updated README for the expanded adapters, plugin system, and rule catalog
+
+## Verified in Phase 3 implementation
+
+- `make check` on Python 3.13.5: 277 tests passed, no warnings
+- Ruff lint and format checks passed for all 280 Python files
+- `mypy --strict`: no issues in 81 source files
+- `agentguard rules` lists all 15 Phase 1–3 rules
+- `agentguard plugins list` discovers built-ins and the LangGraph plugin
+- Core and LangGraph package wheels build successfully
+- A separately built and installed external scaffold plugin appears in
+  `agentguard rules` as AG900 and in `agentguard plugins info`
+
+## Completed in Phase 4, Step 4.1
+
+- Added deterministic SARIF 2.1.0 reporting with rule metadata, locations,
+  severity, confidence, suggestions, related locations, and fingerprints
+- Registered SARIF through the plugin reporter boundary
+- Added `agentguard scan --format sarif`
+- Added SARIF snapshot coverage, empty-fingerprint behavior, and CLI coverage
+
+## Verified in Phase 4, Step 4.1
+
+- `make check` on Python 3.13.5: 280 tests passed, no warnings
+- Ruff lint and format checks passed for all 281 Python files
+- `mypy --strict`: no issues in 82 source files
+
+## Completed in Phase 4, Step 4.2
+
+- Added the reusable composite GitHub Action at
+  `.github/actions/agentguard/action.yml`
+- Added configurable scan path, SARIF output, rule selection, ignore patterns,
+  failure threshold, and Python version inputs
+- Added CI documentation with SARIF upload permissions and workflow example
+- Added validation tests for the action metadata and CI documentation
+
+## Verified in Phase 4, Step 4.2
+
+- `make check` on Python 3.13.5: 282 tests passed, no warnings
+- Ruff lint and format checks passed for all 281 Python files
+- `mypy --strict`: no issues in 82 source files
+
+## Completed in Phase 4, Step 4.3
+
+- Added `.pre-commit-hooks.yaml` with a Python-file AgentGuard hook
+- Added staged-file usage and rule-argument documentation to `docs/ci.md`
+- Added validation tests for hook metadata and documentation examples
+
+## Verified in Phase 4, Step 4.3
+
+- `make check` on Python 3.13.5: 284 tests passed, no warnings
+- Ruff lint and format checks passed for all 282 Python files
+- `mypy --strict`: no issues in 83 source files
+
+## Completed in Phase 4, Step 4.4
+
+- Added the approved `libcst` dependency to the core and compatibility package
+  metadata and lockfile
+- Added a typed `FixEngine` with formatting-preserving LibCST transforms
+- Added deterministic unified diff generation
+- Added explicit apply behavior while keeping preview mode side-effect free
+- Added parse-error, transformation-error, no-op, formatting-preservation, and
+  explicit-write tests
+
+## Verified in Phase 4, Step 4.4
+
+- `make check` on Python 3.13.5: 288 tests passed, no warnings
+- Ruff lint and format checks passed for all 282 Python files
+- `mypy --strict`: no issues in 83 source files
+
+## Completed in Phase 4, Step 4.5
+
+- Added AG003 LibCST timeout autofix for supported known-call findings
+- Added `--fix-dry-run`, `--fix`, and `--fix-timeout` scan options
+- Kept dry-run preview side-effect free and limited writes to explicit `--fix`
+- Added CLI and direct-transform tests for requests timeout insertion and
+  deterministic diff output
+
+## Verified in Phase 4, Step 4.5
+
+- `make check` on Python 3.13.5: 291 tests passed, no warnings
+- Ruff lint and format checks passed for all 286 Python files
+- `mypy --strict`: no issues in 87 source files
+
+## Completed in Phase 4, Step 4.6
+
+- Added AG004 LibCST recursion-limit autofix for supported LangGraph builders
+- Preserved existing compile arguments and skipped already-bounded graphs
+- Routed AG004 through the shared dry-run/apply fix pipeline
+- Added direct transformer and CLI dry-run coverage
+
+## Verified in Phase 4, Step 4.6
+
+- `make check` on Python 3.13.5: 293 tests passed, no warnings
+- Ruff lint and format checks passed for all 287 Python files
+- `mypy --strict`: no issues in 88 source files
+
+## Completed in Phase 4, Step 4.7
+
+- Added configurable `[tool.agentguard.fix.model]` mappings
+- Added AG010 literal-only model pinning through LibCST
+- Skipped dynamic values and aliases without an explicit mapping
+- Integrated AG010 with the shared dry-run/apply pipeline
+- Added configuration, direct-transform, and dynamic-value tests
+
+## Verified in Phase 4, Step 4.7
+
+- `make check` on Python 3.13.5: 296 tests passed, no warnings
+- Ruff lint and format checks passed for all 288 Python files
+- `mypy --strict`: no issues in 89 source files
+
+## Completed in the approved Phase 5 taint unit
+
+- Added a deterministic same-file function call graph to generic module facts,
+  including recursive local calls.
+- Added return-source summaries for direct user input, environment, tool, and
+  LLM sources plus local function-call dependencies.
+- Resolve summaries to a fixed point so definition order and multi-hop local
+  calls propagate taint without executing application code.
+- Kept clean literal-return chains untainted and recursive summaries
+  terminating conservatively.
+- Documented the optional plugin boundary and current interprocedural limits
+  in `docs/architecture.md`.
+
+## Verified in the approved Phase 5 taint unit
+
+- Focused taint, plugin, and regression tests pass.
+- `make check` on Python 3.13.5: 303 tests passed, no warnings
+- Ruff lint and format checks passed for all 295 Python files
+- `mypy --strict`: no issues found in 96 checked source files
+
+## Phase 4 acceptance note
+
+Phase 4 is functionally complete: SARIF, GitHub Action, pre-commit metadata,
+LibCST dry-run/apply infrastructure, and AG003/AG004/AG010 safe fixes are
+implemented and verified. A final package-build record is included above; the
+next implementation work begins Phase 5 optional plugins.
+
+## Completed in Phase 4 acceptance
+
+- Added `docs/autofix.md` with safe preview/apply behavior and model mappings
+- Linked CI and autofix documentation from the README
+- Verified SARIF output, bundled-example dry-run fixes, clean-agent behavior,
+  version commands, locked installation, and package builds
+
+## Verified in Phase 4 acceptance
+
+- `uv sync --locked --all-extras`
+- `uv run --locked agentguard --version`
+- `uv run --locked python -m agentguard --version`
+- `agentguard scan examples/ --format sarif --fail-on never`
+- `agentguard scan examples/ --fix-dry-run --fail-on never`
+- `agentguard scan examples/clean_agent --fix-dry-run --fail-on never`
+- Core and LangGraph package wheels build successfully
+- `make check` on Python 3.13.5: 297 tests passed, no warnings
+- Ruff lint and format checks passed for all 288 Python files
+- `mypy --strict`: no issues in 89 source files
+
+## Phase 3 acceptance corpus
+
+- `langchain-ai/langgraph`: 38 findings
+- `langchain-ai/langgraph-supervisor-py`: 0 findings
+- `langchain-ai/langgraph-swarm-py`: 2 findings
+- `crewAIInc/crewAI-examples`: 16 findings
+- `microsoft/autogen` `python/samples`: 3 findings
+- All five scans completed without crashes; rule distributions and manual
+  plausibility checks are recorded in `docs/benchmarks.md`
+- 156 Phase 3 fixture cases pass: five bad, five good, and three edge fixtures
+  for each AG004–AG011 and AG020–AG023 rule
+
 ## Next
 
-The next unit is Phase 3, Step 3.1: extend the Agent IR for graph reachability,
-cost metadata, tool safety, and intra-function dataflow facts.
+The next unit is Phase 5 plugin integration verification, beginning with the
+graph visualization command and its normalized graph output.
 
 ## Known issues
 
@@ -330,3 +512,8 @@ cost metadata, tool safety, and intra-function dataflow facts.
   treating unresolved arbitrary `.invoke()` methods as LLM calls.
 - Corpus verification used shallow clones in `/tmp/omnirush/langgraph-corpus`;
   those external temporary files are not part of the repository.
+- Phase 3 corpus verification used filtered clones in
+  `/tmp/omnirush/phase3-corpus`; those external temporary files are not part
+  of the repository.
+- A dedicated cold-start 10,000-line performance harness is not yet present;
+  the benchmark document records this as follow-up work.

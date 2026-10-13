@@ -5,7 +5,8 @@ cost, and security bugs in agent graphs, tool calls, retries, and LLM calls
 before an agent runs.
 
 The project currently ships the Phase 1 core engine, normalized Agent IR,
-generic and LangGraph adapters, and the AG001–AG003 rules.
+generic, LangGraph, CrewAI, and AutoGen adapters, the Phase 2 plugin system,
+and 15 documented reliability, cost, and security rules.
 
 ## Development setup
 
@@ -71,6 +72,8 @@ List the built-in rules or read a rule's remediation guidance:
 ```bash
 uv run --locked agentguard rules
 uv run --locked agentguard explain AG003
+uv run --locked agentguard plugins list
+uv run --locked agentguard baseline create examples/ --output baseline.json
 ```
 
 Useful scan options include:
@@ -94,6 +97,8 @@ requests.get(url)  # agentguard: ignore[AG003] reason: gateway adds timeout
 
 See [the architecture guide](docs/architecture.md) and the individual pages in
 [`docs/rules/`](docs/rules/) for the IR pipeline and rule-specific guidance.
+See [the CI guide](docs/ci.md) for GitHub and pre-commit integration, and
+[the autofix guide](docs/autofix.md) for safe dry-run and apply behavior.
 
 ## License
 

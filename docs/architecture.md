@@ -50,3 +50,21 @@ reporters do not re-analyze source.
 - Unresolved names and dynamic keyword arguments are handled conservatively.
 - Parallel parsing preserves deterministic ordering before rules run.
 - Suppressions are explicit and can include a reason for code review.
+
+## Optional intelligence plugins
+
+Phase 5 functionality remains opt-in and keeps the core scanner offline:
+
+- `agentguard-graph` renders normalized graph edges as Mermaid text.
+- `agentguard-owasp` adds deterministic OWASP LLM Top 10 and CWE metadata to
+  matching findings.
+- `agentguard-llm-triage` uses a user-supplied provider and optional local
+  cache; it is advisory and never changes finding severity.
+- `agentguard-trace` reads local JSON span exports and reports repeated failed
+  spans without contacting a tracing service.
+
+The generic adapter also records a same-file function call graph and resolves
+return-source summaries through local calls. Summaries are computed to a fixed
+point, so definition order and bounded recursive call graphs do not affect
+termination. Dynamic dispatch, cross-module calls, and argument-sensitive
+interprocedural flow remain unknown rather than being treated as tainted.
