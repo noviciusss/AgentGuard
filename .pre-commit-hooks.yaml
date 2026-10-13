@@ -1,0 +1,7 @@
+- id: agentguard
+  name: AgentGuard
+  description: Scan staged Python files for agent reliability and security findings.
+  entry: agentguard scan --fail-on error
+  language: python
+  types: [python]
+  pass_filenames: true

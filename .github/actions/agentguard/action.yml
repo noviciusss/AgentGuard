@@ -1,0 +1,53 @@
+name: AgentGuard scan
+description: Run AgentGuard and produce a SARIF report.
+inputs:
+  path:
+    description: File or directory to scan.
+    required: false
+    default: "."
+  output:
+    description: SARIF output path.
+    required: false
+    default: "agentguard.sarif"
+  select:
+    description: Comma-separated rule selection patterns.
+    required: false
+    default: ""
+  ignore:
+    description: Comma-separated rule ignore patterns.
+    required: false
+    default: ""
+  fail-on:
+    description: Finding threshold that fails the step.
+    required: false
+    default: "error"
+  python-version:
+    description: Python version used by uv.
+    required: false
+    default: "3.13"
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: "0.13.0"
+        enable-cache: true
+    - name: Run AgentGuard
+      shell: bash
+      env:
+        AG_PATH: ${{ inputs.path }}
+        AG_OUTPUT: ${{ inputs.output }}
+        AG_SELECT: ${{ inputs.select }}
+        AG_IGNORE: ${{ inputs.ignore }}
+        AG_FAIL_ON: ${{ inputs.fail-on }}
+      run: |
+        set -euo pipefail
+        args=("$AG_PATH" --format sarif --output "$AG_OUTPUT" --fail-on "$AG_FAIL_ON")
+        if [[ -n "$AG_SELECT" ]]; then args+=(--select "$AG_SELECT"); fi
+        if [[ -n "$AG_IGNORE" ]]; then args+=(--ignore "$AG_IGNORE"); fi
+        uvx --python "${{ inputs.python-version }}" --from agentguard agentguard scan "${args[@]}"
