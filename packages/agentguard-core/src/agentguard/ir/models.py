@@ -51,7 +51,7 @@ class TaintSink(str, Enum):
 
 @dataclass(frozen=True)
 class TaintFlow:
-    """A conservative intra-function source-to-sink dataflow fact."""
+    """A conservative source-to-sink dataflow fact, possibly inter-procedural."""
 
     loc: Location
     source: DataSource

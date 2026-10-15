@@ -55,6 +55,19 @@ class Finding:
     metadata: tuple[tuple[str, str], ...] = ()
 
 
+def normalize_metadata(
+    metadata: tuple[tuple[str, str], ...],
+) -> tuple[tuple[str, str], ...]:
+    """Return metadata with one deterministic value for each key."""
+    values = {key: value for key, value in metadata}
+    return tuple(sorted(values.items()))
+
+
+def metadata_dict(metadata: tuple[tuple[str, str], ...]) -> dict[str, str]:
+    """Return normalized metadata for reporter serialization."""
+    return dict(normalize_metadata(metadata))
+
+
 def finding_sort_key(finding: Finding) -> tuple[str, int, int, str]:
     """Return the stable ordering key required for reported findings."""
     return (
