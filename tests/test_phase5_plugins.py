@@ -5,6 +5,7 @@ from pathlib import Path
 
 from agentguard.engine.parser import parse_source
 from agentguard.ir.taint import analyze_taint
+from agentguard.plugins import PluginManager
 from agentguard_trace import load_spans
 
 
@@ -36,3 +37,10 @@ eval(value)
 
     assert facts.call_graph["wrapper"] == ("ask",)
     assert any(flow.sink.value == "eval" for flow in facts.flows)
+
+
+def test_phase5_plugin_names_are_available_for_introspection() -> None:
+    manager = PluginManager.default()
+
+    assert manager.info("agentguard-owasp").name == "agentguard-owasp"
+    assert manager.info("agentguard-graph").name == "agentguard-graph"

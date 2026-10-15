@@ -86,6 +86,8 @@ class PluginManager:
                 )
         if callable(getattr(plugin, "register_commands", None)):
             contributions["register_commands"] = ()
+        if callable(getattr(plugin, "modify_findings", None)):
+            contributions["modify_findings"] = ()
         return contributions
 
     def load_errors(self) -> tuple[str, ...]:
@@ -108,7 +110,13 @@ class PluginManager:
                     if entry_point.dist is not None
                     else "unknown"
                 )
-                self.register(plugin, name=entry_point.name, version=version)
+                declared_name = getattr(plugin, "name", None)
+                plugin_name = (
+                    declared_name.strip()
+                    if isinstance(declared_name, str) and declared_name.strip()
+                    else entry_point.name
+                )
+                self.register(plugin, name=plugin_name, version=version)
             except (ImportError, AttributeError, TypeError, ValueError) as error:
                 self._load_errors.append(f"{entry_point.name}: {error}")
 
