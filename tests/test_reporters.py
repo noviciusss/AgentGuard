@@ -1,5 +1,6 @@
 """Reporter output tests."""
 
+from dataclasses import replace
 from pathlib import Path
 
 from agentguard.findings import Confidence, Finding, Location, Severity
@@ -118,3 +119,18 @@ def test_sarif_omits_empty_fingerprint() -> None:
     rendered = SarifReporter().render([finding()])
 
     assert '"fingerprints"' not in rendered
+
+
+def test_reporters_preserve_finding_metadata() -> None:
+    tagged = replace(finding(), tags=("CWE-400",), metadata=(("owasp", "LLM10"),))
+
+    text = TextReporter().render([tagged])
+    json_output = JsonReporter().render([tagged])
+    sarif = SarifReporter().render([tagged])
+
+    assert "tags: CWE-400" in text
+    assert "metadata: owasp=LLM10" in text
+    assert '"metadata": {' in json_output
+    assert '"owasp": "LLM10"' in json_output
+    assert '"metadata": {' in sarif
+    assert '"owasp": "LLM10"' in sarif

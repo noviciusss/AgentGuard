@@ -4,7 +4,7 @@ import json
 from collections.abc import Iterable
 from typing import ClassVar
 
-from agentguard.findings import Finding, sort_findings
+from agentguard.findings import Finding, metadata_dict, sort_findings
 from agentguard.reporters.base import Reporter
 
 
@@ -50,5 +50,5 @@ def _serialize(finding: Finding) -> dict[str, object]:
     if finding.tags:
         payload["tags"] = list(finding.tags)
     if finding.metadata:
-        payload["metadata"] = dict(finding.metadata)
+        payload["metadata"] = metadata_dict(finding.metadata)
     return payload

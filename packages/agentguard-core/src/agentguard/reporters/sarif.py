@@ -7,7 +7,13 @@ from collections.abc import Iterable
 from typing import ClassVar
 
 from agentguard import __version__
-from agentguard.findings import Finding, Location, Severity, sort_findings
+from agentguard.findings import (
+    Finding,
+    Location,
+    Severity,
+    metadata_dict,
+    sort_findings,
+)
 from agentguard.reporters.base import Reporter
 
 
@@ -58,7 +64,7 @@ def _result(finding: Finding, index: int) -> dict[str, object]:
         "why": finding.why,
     }
     if finding.metadata:
-        properties["metadata"] = dict(finding.metadata)
+        properties["metadata"] = metadata_dict(finding.metadata)
     if finding.tags:
         properties["tags"] = list(finding.tags)
     result: dict[str, object] = {

@@ -4,9 +4,10 @@ AgentGuard is a static analysis CLI for AI agent codebases. It finds reliability
 cost, and security bugs in agent graphs, tool calls, retries, and LLM calls
 before an agent runs.
 
-The project currently ships the Phase 1 core engine, normalized Agent IR,
-generic, LangGraph, CrewAI, and AutoGen adapters, the Phase 2 plugin system,
-and 15 documented reliability, cost, and security rules.
+The project ships the normalized Agent IR, generic/LangGraph/CrewAI/AutoGen
+adapters, the plugin system, 15 documented reliability/cost/security rules,
+SARIF and autofix support, and the Phase 5 graph, OWASP, triage, and trace
+plugins.
 
 ## Development setup
 
@@ -74,6 +75,8 @@ uv run --locked agentguard rules
 uv run --locked agentguard explain AG003
 uv run --locked agentguard plugins list
 uv run --locked agentguard baseline create examples/ --output baseline.json
+uv run --locked agentguard graph examples/langgraph_support_bot
+uv run --locked agentguard trace path/to/local-trace.json
 ```
 
 Useful scan options include:
@@ -87,6 +90,20 @@ agentguard scan [PATHS...] --format text|json
     --jobs N --output FILE --no-cache
 ```
 
+Phase 5 commands:
+
+```text
+agentguard graph PATH [--output FILE]                 # Mermaid normalized IR
+agentguard trace TRACE.json [--output FILE]           # loops and cost spikes
+agentguard triage --input FINDINGS.json               # explicit provider needed
+    --source-root PROJECT --provider module:factory
+    [--cache FILE]
+```
+
+`agentguard triage` can send redacted source snippets to arbitrary provider
+code, so use it only with a provider you trust. It never runs during `scan`
+and does not change finding severity.
+
 The scanner parses source without importing or executing it. A syntax error is
 reported as a warning and the remaining files continue to scan. Findings are
 deterministically sorted and can be suppressed inline:
@@ -99,6 +116,36 @@ See [the architecture guide](docs/architecture.md) and the individual pages in
 [`docs/rules/`](docs/rules/) for the IR pipeline and rule-specific guidance.
 See [the CI guide](docs/ci.md) for GitHub and pre-commit integration, and
 [the autofix guide](docs/autofix.md) for safe dry-run and apply behavior.
+See [the distribution guide](docs/distribution.md) for bundled and standalone
+installation profiles. Do not install both profiles into the same environment.
+
+## Phase 6 platform development
+
+The hosted platform is split from the offline analyzer. The server package is
+`packages/agentguard-server` and uses FastAPI, SQLAlchemy 2, psycopg 3, and
+Alembic. The core CLI does not import the server or require PostgreSQL.
+
+With Docker Compose available, start PostgreSQL and the API together:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+The API is available at <http://localhost:8000>, with liveness at `/healthz`,
+readiness at `/readyz`, and OpenAPI documentation at `/docs`. The separate
+Next.js dashboard lives under `web/`:
+
+```bash
+cd web
+npm ci
+AGENTGUARD_API_URL=http://localhost:8000 npm run dev
+```
+
+See [`docs/server.md`](docs/server.md) for migrations, PostgreSQL-backed tests,
+authentication configuration, scan ingestion, GitHub webhook verification, and
+privacy-safe badge behavior. The dashboard contract and its required states are
+documented in [`web/README.md`](web/README.md).
 
 ## License
 

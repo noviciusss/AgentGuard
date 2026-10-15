@@ -24,4 +24,11 @@ class TextReporter(Reporter):
             )
             lines.append(f"  why: {finding.why}")
             lines.append(f"  fix: {finding.suggestion}")
+            if finding.tags:
+                lines.append(f"  tags: {', '.join(finding.tags)}")
+            if finding.metadata:
+                metadata = ", ".join(
+                    f"{key}={value}" for key, value in sorted(finding.metadata)
+                )
+                lines.append(f"  metadata: {metadata}")
         return "\n".join(lines)

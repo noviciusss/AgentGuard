@@ -51,20 +51,29 @@ reporters do not re-analyze source.
 - Parallel parsing preserves deterministic ordering before rules run.
 - Suppressions are explicit and can include a reason for code review.
 
-## Optional intelligence plugins
+## Phase 5 intelligence plugins
 
-Phase 5 functionality remains opt-in and keeps the core scanner offline:
+Phase 5 capabilities keep the scanner offline. Graph and trace analysis are
+explicit CLI commands; LLM triage is additionally opt-in through a user-owned
+provider. The bundled distributions are discovered through the same plugin
+boundary as separately installed plugins.
 
-- `agentguard-graph` renders normalized graph edges as Mermaid text.
-- `agentguard-owasp` adds deterministic OWASP LLM Top 10 and CWE metadata to
-  matching findings.
-- `agentguard-llm-triage` uses a user-supplied provider and optional local
-  cache; it is advisory and never changes finding severity.
-- `agentguard-trace` reads local JSON span exports and reports repeated failed
-  spans without contacting a tracing service.
+- `agentguard graph` renders normalized graph nodes, entry/terminal markers,
+  static and conditional edges, unresolved targets, and fan-outs as Mermaid.
+  Labels are escaped and IDs are generated independently of user names.
+- `agentguard-owasp` adds deterministic OWASP LLM Top 10 (2025) and CWE tags
+  to applicable findings. JSON and SARIF preserve machine metadata; text output
+  shows tags and metadata when present.
+- `agentguard-llm-triage` reads a JSON finding report and a bounded,
+  string/comment-redacted local source snippet. It validates provider results,
+  supports request-bound private caches, and never changes finding severity.
+- `agentguard-trace` reads flat, LangSmith-like, or nested OTLP JSON exports.
+  It reports repeated operations within one trace (`TRACE001`) and explicit
+  cost outliers (`TRACE002`) without inferring provider prices.
 
-The generic adapter also records a same-file function call graph and resolves
-return-source summaries through local calls. Summaries are computed to a fixed
-point, so definition order and bounded recursive call graphs do not affect
-termination. Dynamic dispatch, cross-module calls, and argument-sensitive
-interprocedural flow remain unknown rather than being treated as tainted.
+The generic adapter records a same-file function call graph and performs
+argument-sensitive return and sink propagation through direct module-level
+functions. Summaries use a fixed point so definition order and recursive call
+graphs terminate. Imported/cross-module calls, class or nested-function
+dispatch, and other dynamic callables remain unknown rather than being treated
+as tainted.

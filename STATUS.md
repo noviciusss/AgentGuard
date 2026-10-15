@@ -3,8 +3,8 @@
 ## Current position
 
 - Phase: 5 — Intelligence (optional plugins)
-- Step: same-file inter-procedural taint propagation
-- Status: implementation complete; full verification follows below
+- Step: R1 — performance and corpus gate
+- Status: R1 complete; next unit is Phase 6.1 server foundation
 
 ## Completed in Step 0.1
 
@@ -450,9 +450,43 @@ Phase 1 findings rather than parser or adapter crashes.
 ## Verified in the approved Phase 5 taint unit
 
 - Focused taint, plugin, and regression tests pass.
-- `make check` on Python 3.13.5: 303 tests passed, no warnings
-- Ruff lint and format checks passed for all 295 Python files
-- `mypy --strict`: no issues found in 96 checked source files
+- Argument-sensitive helper sinks, return forwarding, keyword/default binding,
+  scope isolation, clean overwrites, recursion, aliases, and unknown-call
+  boundaries are covered.
+
+## Completed in Phase 5
+
+- Completed `agentguard graph` Mermaid rendering from normalized IR, including
+  deterministic module/graph ordering, isolated nodes, entry and terminal
+  markers, static/conditional edges, unresolved targets, fan-outs, escaped
+  labels, output files, and CLI diagnostics.
+- Completed the offline OWASP/CWE modifier with deterministic tags, metadata,
+  catalog version, applicable cost/state mappings, reporter serialization, and
+  plugin introspection.
+- Completed opt-in provider-neutral LLM triage with bounded redacted snippets,
+  source-root containment, validated provider results, request-bound private
+  caching, atomic writes, and controlled input/provider error codes.
+- Completed local trace ingestion for flat, LangSmith-like, and nested OTLP
+  JSON exports with normalized IDs/timestamps/attributes/status/model/cost,
+  trace-local repetition findings, explicit cost-spike findings, deterministic
+  output, and malformed-input handling.
+- Completed same-file argument-sensitive inter-procedural taint propagation
+  through direct module-level functions with fixed-point recursion handling.
+
+## Verified in Phase 5
+
+- `uv sync --locked --all-extras`
+- `make check` on Python 3.13.5: **356 tests passed**, no warnings
+- Ruff lint and format checks passed; 301 files formatted
+- `mypy --strict`: no issues found in 102 checked source files
+- Focused Phase 5 suite: 51 tests passed
+- `agentguard plugins list` discovers all six plugin contributions with stable
+  declared names; OWASP modifier appears in `plugins info`.
+- `agentguard graph examples/langgraph_support_bot` emits deterministic Mermaid
+  with START and END markers.
+- Bundled example scan emits OWASP/CWE metadata in JSON output.
+- Triage help, trace CLI, graph CLI, output-file handling, malformed-input
+  behavior, and plugin discovery are covered by tests and smoke checks.
 
 ## Phase 4 acceptance note
 
@@ -495,8 +529,52 @@ next implementation work begins Phase 5 optional plugins.
 
 ## Next
 
-The next unit is Phase 5 plugin integration verification, beginning with the
-graph visualization command and its normalized graph output.
+Phase 5 is complete. The next planned work is Phase 6 platform infrastructure.
+
+The approved post-Phase 5 roadmap and issue register is in
+`docs/ROADMAP_AND_ISSUES.md`. Release/package alignment, the repeatable
+performance benchmark, and the external corpus refresh are complete; the next
+unit is the Phase 6.1 server foundation.
+
+## Completed in R0 — release/package alignment
+
+- Defined two mutually exclusive installation profiles: the recommended root
+  `agentguard` bundle and `agentguard-core` plus selected standalone plugins.
+- Changed standalone Phase 5 plugin dependencies from `agentguard` to
+  `agentguard-core`.
+- Documented package ownership and mixed-install restrictions in
+  `docs/distribution.md`.
+- Added metadata/profile tests covering root entry points, standalone core
+  dependencies, and the distribution contract.
+
+## Verified in R0
+
+- `tests/test_packaging.py`: 3 passed
+- Root bundle and all six standalone package distributions built successfully
+  as wheels and source distributions in `/tmp/omnirush/phase6-r0-*`.
+- `make check` after the metadata changes: **356 tests passed**, no warnings.
+
+## Completed in R1 — performance and corpus gate
+
+- Added `benchmarks/scan_10k.py` for a deterministic exactly-10,000-line
+  workload measured through fresh `python -m agentguard scan` subprocesses.
+- Added `benchmarks/corpus_gate.py` for deterministic local corpus summaries
+  without cloning or network access.
+- Added benchmark and corpus helper tests.
+- Recorded the measured results in `docs/benchmarks.md`.
+
+## Verified in R1
+
+- 10,000-line benchmark, three samples: 3.443s, 4.090s, and 3.774s;
+  median 3.774s against the 5.000s budget.
+- Generated benchmark fixture: one file, zero findings, zero parse errors.
+- Local `examples/` corpus: 3 Python files, 97 lines, 12 findings, zero parse
+  errors, completed without a crash.
+- `tests/test_benchmarks.py`: 3 passed.
+- Fresh public corpus refresh completed for LangGraph, LangGraph supervisor,
+  LangGraph swarm, CrewAI examples, and AutoGen samples; all five completed
+  without parse errors or crashes. Counts and manual plausibility checks are in
+  `docs/benchmarks.md`.
 
 ## Known issues
 
@@ -515,5 +593,16 @@ graph visualization command and its normalized graph output.
 - Phase 3 corpus verification used filtered clones in
   `/tmp/omnirush/phase3-corpus`; those external temporary files are not part
   of the repository.
-- A dedicated cold-start 10,000-line performance harness is not yet present;
-  the benchmark document records this as follow-up work.
+- The R1 benchmark measures a fresh Python CLI subprocess but excludes outer
+  `uv` startup and fixture generation; other filesystems and Python versions
+  still require CI validation.
+- Phase 5 plugins are bundled in the current root distribution for this
+  workspace; standalone package metadata is also retained for plugin boundary
+  builds. Installing both forms may expose duplicate entry points in external
+  environments and should be normalized before publishing packages.
+- Trace loop detection is a deterministic repeated-operation heuristic, not
+  full graph-cycle reconstruction. Cost findings require explicit reported
+  costs and never infer provider pricing from token counts.
+- Triage providers are synchronous and responsible for their own SDK/network
+  timeout. Redaction covers Python string literals and comments, not all
+  possible secrets in identifiers or code structure.
