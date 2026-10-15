@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from agentguard.findings import Finding
+from agentguard.findings import Finding, normalize_metadata
 from agentguard.ir.models import AgentSystem
 from agentguard.plugins import hookimpl
+
+OWASP_VERSION = "2025"
 
 TAGS: dict[str, tuple[str, str]] = {
     "AG020": ("LLM01:Prompt Injection", "CWE-693"),
@@ -15,6 +17,8 @@ TAGS: dict[str, tuple[str, str]] = {
     "AG023": ("LLM02:Sensitive Information Disclosure", "CWE-798"),
     "AG001": ("LLM10:Unbounded Consumption", "CWE-400"),
     "AG004": ("LLM10:Unbounded Consumption", "CWE-835"),
+    "AG005": ("LLM10:Unbounded Consumption", "CWE-400"),
+    "AG011": ("LLM10:Unbounded Consumption", "CWE-400"),
 }
 
 
@@ -36,8 +40,13 @@ class Plugin:
                 continue
             owasp, cwe = mapping
             tags = tuple(sorted({*finding.tags, owasp, cwe}))
-            metadata = tuple(
-                sorted({*finding.metadata, ("owasp", owasp), ("cwe", cwe)})
+            metadata = normalize_metadata(
+                (
+                    *finding.metadata,
+                    ("cwe", cwe),
+                    ("owasp", owasp),
+                    ("owasp_version", OWASP_VERSION),
+                )
             )
             tagged.append(replace(finding, tags=tags, metadata=metadata))
         return tagged

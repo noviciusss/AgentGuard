@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "agentguard-trace"
 version = "0.1.0"
 requires-python = ">=3.10"
-dependencies = ["agentguard>=0.1"]
+dependencies = ["agentguard-core>=0.1"]
 
 [project.entry-points.agentguard]
 trace = "agentguard_trace:Plugin"
