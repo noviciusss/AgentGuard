@@ -1,0 +1,23 @@
+{
+  "name": "agentguard-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Next.js dashboard scaffold for AgentGuard scan history",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "14.2.35",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.30",
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "typescript": "5.8.2"
+  }
+}
