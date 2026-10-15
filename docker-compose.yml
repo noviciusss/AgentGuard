@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: agentguard
+      POSTGRES_PASSWORD: agentguard
+      POSTGRES_DB: agentguard
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentguard -d agentguard"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - agentguard-postgres:/var/lib/postgresql/data
+
+  server:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AGENTGUARD_DATABASE_URL: postgresql+psycopg://agentguard:agentguard@postgres:5432/agentguard
+      AGENTGUARD_CORS_ORIGINS: http://localhost:3000
+    command:
+      - sh
+      - -c
+      - >-
+        uv run --locked --package agentguard-server alembic
+        -c packages/agentguard-server/alembic.ini upgrade head
+        && uv run --locked --package agentguard-server uvicorn
+        agentguard_server.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+
+volumes:
+  agentguard-postgres:
