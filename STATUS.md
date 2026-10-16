@@ -2,9 +2,10 @@
 
 ## Current position
 
-- Phase: 5 — Intelligence (optional plugins)
-- Step: R1 — performance and corpus gate
-- Status: R1 complete; next unit is Phase 6.1 server foundation
+- Phase: 6 — Platform
+- Step: 6.7 — release and final validation
+- Status: Phase 6 implementation slice complete; release evidence reconciliation
+  is complete locally and external CI/production review remain before publication
 
 ## Completed in Step 0.1
 
@@ -529,12 +530,11 @@ next implementation work begins Phase 5 optional plugins.
 
 ## Next
 
-Phase 5 is complete. The next planned work is Phase 6 platform infrastructure.
-
-The approved post-Phase 5 roadmap and issue register is in
-`docs/ROADMAP_AND_ISSUES.md`. Release/package alignment, the repeatable
-performance benchmark, and the external corpus refresh are complete; the next
-unit is the Phase 6.1 server foundation.
+Phase 6 is the final phase defined by `SPEC.md`. The implementation slice and
+local release evidence are complete. Remaining work is external release
+closure: GitHub Actions matrix evidence, production worker/authentication
+choices, browser smoke tests if desired, and publishing/deployment setup.
+The detailed register is in `docs/ROADMAP_AND_ISSUES.md`.
 
 ## Completed in R0 — release/package alignment
 
@@ -576,6 +576,50 @@ unit is the Phase 6.1 server foundation.
   without parse errors or crashes. Counts and manual plausibility checks are in
   `docs/benchmarks.md`.
 
+## Completed in Phase 6 platform slice
+
+- Added standalone `agentguard-server` workspace packaging with FastAPI,
+  SQLAlchemy 2, psycopg 3, and Alembic.
+- Added PostgreSQL migrations through `0004_audit_records` for repositories,
+  branches, commits, scans, findings, baselines, plugin/configuration versions,
+  webhook delivery claims, badge visibility, and sanitized audit records.
+- Added idempotent JSON and SARIF scan ingestion, deterministic pagination,
+  repository-scoped reads, aggregate repository detail, and health/readiness
+  endpoints while keeping the core CLI independent of the server.
+- Added bearer-token authentication, repository/scope authorization,
+  request IDs, payload limits, process-local rate limiting, redacted audit
+  sinks, and explicit scan-retention helpers.
+- Added signed GitHub pull-request webhook parsing for opened, synchronize, and
+  reopened events, durable delivery replay claims, and queued commit-pinned
+  scans.
+- Added privacy-safe aggregate risk badges with repository opt-in visibility,
+  ETags, cache headers, missing/stale/private/unavailable states, and no source
+  snippets in public output.
+- Added the separate Next.js dashboard with typed API mapping, repository and
+  scan detail pages, risk trends, baseline/PR placeholders, and loading,
+  forbidden, unavailable, error, and empty states.
+- Added Dockerfile, Docker Compose PostgreSQL runtime, `.env.example`, Node
+  lockfile checks, and the dashboard CI typecheck job.
+
+## Verified in Phase 6 platform slice
+
+- `make check`: Ruff clean, strict mypy clean across 118 source files, and 361
+  root tests passed.
+- Server package checks: strict mypy clean across 24 source/test files and 56
+  PostgreSQL-backed tests passed with 0 skipped and 0 failed.
+- SQLite migration smoke: Alembic upgraded a clean database through
+  `0004_audit_records`.
+- `npm test`: dashboard TypeScript check passed.
+- Next.js production build passed on Next 14.2.35 with Node 20, matching the
+  repository `.nvmrc`; the WSL host's Node 22 build workers can hang during
+  static page generation.
+- Root and server source/wheel distributions built successfully in
+  `/tmp/omnirush/agentguard-build-root` and `/tmp/omnirush/agentguard-build-server`.
+- The owner-reported Docker Compose smoke run built the server image, waited for
+  PostgreSQL health, applied all four migrations, and returned HTTP 200 from
+  `/healthz` and `/readyz`. The live API docs were available at `/docs`.
+- GitHub CI now runs both `npm test` and `npm run build` for the dashboard job.
+
 ## Known issues
 
 - `uv` is installed at `$HOME/.local/bin/uv`; shells must include that path or
@@ -606,3 +650,12 @@ unit is the Phase 6.1 server foundation.
 - Triage providers are synchronous and responsible for their own SDK/network
   timeout. Redaction covers Python string literals and comments, not all
   possible secrets in identifiers or code structure.
+- Docker is not available to the current Linux shell, although the owner has
+  reported a successful Docker Compose validation from the host environment.
+  Reproduce it with `docker compose up --build` where Docker is available.
+- GitHub webhook handling verifies and queues scans; a production deployment
+  still needs a worker that executes the analyzer and publishes GitHub Check
+  Runs/SARIF annotations.
+- Authentication currently provides environment-managed service tokens and
+  repository scopes. A production identity provider, token rotation, and
+  shared rate-limit storage remain deployment responsibilities.

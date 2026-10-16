@@ -125,16 +125,47 @@ The hosted platform is split from the offline analyzer. The server package is
 `packages/agentguard-server` and uses FastAPI, SQLAlchemy 2, psycopg 3, and
 Alembic. The core CLI does not import the server or require PostgreSQL.
 
-With Docker Compose available, start PostgreSQL and the API together:
+### Start everything with Docker Compose
+
+Docker Compose is the recommended local platform setup. It starts PostgreSQL,
+applies the Alembic migrations, and starts the FastAPI service. The database is
+stored in the named `agentguard-postgres` volume and the API is exposed on port
+`8000`. PostgreSQL is exposed on port `5432` so local integration tests can use
+the same database.
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-The API is available at <http://localhost:8000>, with liveness at `/healthz`,
-readiness at `/readyz`, and OpenAPI documentation at `/docs`. The separate
-Next.js dashboard lives under `web/`:
+Verify the services from a second terminal:
+
+```bash
+curl -fsS http://localhost:8000/healthz
+curl -fsS http://localhost:8000/readyz
+curl -fsS http://localhost:8000/openapi.json > /tmp/agentguard-openapi.json
+```
+
+Expected health output is:
+
+```json
+{"status":"ok","service":"agentguard-server"}
+```
+
+Open the interactive API contract at <http://localhost:8000/docs>. Stop the
+services without deleting the database with:
+
+```bash
+docker compose down
+```
+
+Use `docker compose down -v` only when intentionally resetting the local
+database. The web dashboard is a separate process and is started below.
+
+### Run the dashboard
+
+The Next.js dashboard lives under `web/` and reads the backend URL from
+`AGENTGUARD_API_URL`:
 
 ```bash
 cd web
@@ -142,10 +173,188 @@ npm ci
 AGENTGUARD_API_URL=http://localhost:8000 npm run dev
 ```
 
-See [`docs/server.md`](docs/server.md) for migrations, PostgreSQL-backed tests,
-authentication configuration, scan ingestion, GitHub webhook verification, and
-privacy-safe badge behavior. The dashboard contract and its required states are
-documented in [`web/README.md`](web/README.md).
+Open <http://localhost:3000>. The dashboard has repository, scan, and finding
+views plus explicit loading, empty, API-unavailable, forbidden, and error
+states. Its API client forwards only the incoming `Authorization` and `Cookie`
+headers; authorization remains a backend responsibility.
+
+Run dashboard checks from `web/`:
+
+```bash
+npm test       # strict TypeScript check
+npm run build  # production Next.js build
+npm start      # serve the production build
+```
+
+### Run the API with an existing PostgreSQL instance
+
+Docker is not required if you already have PostgreSQL. Set the connection URL
+in the shell, apply migrations, and start Uvicorn:
+
+```bash
+export AGENTGUARD_DATABASE_URL='postgresql+psycopg://USER:PASSWORD@HOST:5432/DB'
+export AGENTGUARD_CORS_ORIGINS='http://localhost:3000'
+
+uv run --locked --all-extras --package agentguard-server alembic \
+  -c packages/agentguard-server/alembic.ini upgrade head
+
+uv run --locked --all-extras --package agentguard-server uvicorn \
+  agentguard_server.main:app --host 127.0.0.1 --port 8000
+```
+
+Never put a real password, token, private key, or webhook secret in the
+repository. Use environment variables, a local secret manager, or Docker
+secrets. `.env.example` contains placeholders only.
+
+### Submit and query a scan
+
+The JSON ingestion endpoint is idempotent by `scan_key`. Repeating the same
+request returns the existing scan rather than inserting duplicate findings.
+
+```bash
+curl -X POST http://localhost:8000/api/v1/scans \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "scan_key": "local-scan-1",
+    "repository": {"provider": "github", "full_name": "acme/demo"},
+    "branch": "main",
+    "commit": {"sha": "abc123"},
+    "analyzer_version": "0.1.0",
+    "findings": []
+  }'
+```
+
+Useful read endpoints are:
+
+```text
+GET /api/v1/repositories?page=1&page_size=50
+GET /api/v1/repositories/{repository_id}
+GET /api/v1/repositories/{repository_id}/scans?page=1&page_size=20
+GET /api/v1/scans/{scan_id}
+GET /api/v1/scans?page=1&page_size=50
+```
+
+SARIF uploads use the same persistence and idempotency path. The repository,
+branch, commit, analyzer version, and scan key are explicit query parameters:
+
+```bash
+curl -X POST \
+  'http://localhost:8000/api/v1/scans/sarif?scan_key=ci-123&repository=acme%2Fdemo&branch=main&commit_sha=abc123&analyzer_version=0.1.0' \
+  -H 'Content-Type: application/json' \
+  --data-binary @results.sarif
+```
+
+The server validates repository identifiers, relative source paths, finding
+severity/confidence, source ranges, field lengths, duplicate fingerprints, and
+the declared request size before persisting data.
+
+### Configure development authentication
+
+Authentication is optional for local development. To require bearer tokens:
+
+```bash
+export AGENTGUARD_AUTH_REQUIRED=true
+export AGENTGUARD_API_TOKENS='ci-token=ci;read|write;acme/demo'
+```
+
+The token format is:
+
+```text
+token=subject;scope1|scope2;repository1|repository2
+```
+
+Then call protected endpoints with:
+
+```bash
+curl http://localhost:8000/api/v1/repositories \
+  -H 'Authorization: Bearer ci-token'
+```
+
+`read` and `write` scopes are enforced, and repository scopes provide tenant
+isolation. Cross-repository access returns a generic `404` rather than
+revealing whether another repository exists. The service adds an `X-Request-ID`
+response header, limits declared request size, rate-limits clients, and stores
+redacted audit details. The default rate limiter and audit fallback are
+process-local development implementations; production replicas need shared
+operational services.
+
+### GitHub webhooks and badges
+
+Configure a webhook secret before enabling the GitHub endpoint:
+
+```bash
+export AGENTGUARD_GITHUB_WEBHOOK_SECRET='replace-with-a-secret'
+```
+
+`POST /api/v1/github/webhook` accepts signed GitHub `pull_request` events for
+`opened`, `synchronize`, and `reopened`. It verifies `X-Hub-Signature-256`,
+claims delivery IDs to reject replays, and creates one queued scan tied to the
+pull-request head commit. A background worker that executes queued scans and
+publishes Check Runs is not included in this foundation.
+
+Badges require both `AGENTGUARD_PUBLIC_BADGES=true` and the repository's
+`badge_public` flag. They expose only aggregate risk state and severity counts:
+
+```text
+GET /api/v1/badges/{repository_id}.svg
+GET /api/v1/badges/{repository_id}.json
+```
+
+Private repositories return `404`, and public responses use deterministic ETags
+and cache headers without source snippets or finding messages.
+
+### Run tests and migrations
+
+Install all locked Python workspace dependencies:
+
+```bash
+uv sync --locked --all-extras --all-packages
+```
+
+Run the complete Python check suite:
+
+```bash
+make check
+```
+
+`make check` runs Ruff lint/format checks, strict mypy, the root tests, and the
+server tests. PostgreSQL-specific tests run when
+`AGENTGUARD_TEST_DATABASE_URL` is set; otherwise only those integration tests
+are skipped:
+
+```bash
+export AGENTGUARD_TEST_DATABASE_URL='postgresql+psycopg://agentguard:agentguard@localhost:5432/agentguard'
+make server-test
+```
+
+Apply or inspect migrations directly:
+
+```bash
+AGENTGUARD_DATABASE_URL='postgresql+psycopg://USER:PASSWORD@HOST:5432/DB' \
+  uv run --locked --all-extras --package agentguard-server alembic \
+  -c packages/agentguard-server/alembic.ini upgrade head
+
+uv run --locked --all-extras --package agentguard-server alembic \
+  -c packages/agentguard-server/alembic.ini current
+```
+
+The current migration head is `0004_audit_records`.
+
+### Package and release checks
+
+Build the root CLI and standalone server distributions outside the repository:
+
+```bash
+uv build --out-dir /tmp/omnirush/agentguard-build-root
+uv build --directory packages/agentguard-server \
+  --out-dir /tmp/omnirush/agentguard-build-server
+```
+
+The supported Python CI matrix is 3.10, 3.11, 3.12, and 3.13. GitHub Actions
+also runs the PostgreSQL-backed server suite and the dashboard TypeScript and
+production-build checks. See [`docs/server.md`](docs/server.md) for the full
+server contract, [`docs/distribution.md`](docs/distribution.md) for package
+profiles, and [`web/README.md`](web/README.md) for the dashboard contract.
 
 ## License
 

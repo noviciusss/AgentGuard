@@ -18,13 +18,15 @@ the current repository/package layout.
 - **Phase 5 — Intelligence:** complete locally. It includes graph rendering,
   OWASP/CWE tagging, opt-in LLM triage, local trace analysis, and same-file
   argument-sensitive inter-procedural taint.
-- **Current next step:** Phase 6.1 server and PostgreSQL foundation. R0 and R1
-  release gates are complete for the current repository model.
+- **Current next step:** Phase 6.7 release and deployment validation. The
+  Phase 6.1–6.6 implementation slice is present; PostgreSQL CI evidence,
+  worker execution, production identity integration, and deployment review
+  remain release work.
 
-The latest verified local result is `make check` with 356 passing tests,
-strict mypy clean across 102 checked source files, and clean Ruff checks. These
-checks were run on Python 3.13. The complete CI matrix still needs an external
-run.
+The latest repository check result is `make check` with 361 passing root tests,
+56 passing PostgreSQL-backed server tests, strict mypy clean across 118 checked
+source files, and clean Ruff checks. The complete GitHub Actions matrix remains
+an external release gate.
 
 ## Approved Phase 6 direction
 
@@ -168,6 +170,11 @@ PostgreSQL in tests; service behavior must be tested against PostgreSQL.
 and invalid requests, duplicate ingestion is safe, and the core package does
 not import the server package.
 
+**Status:** implemented. FastAPI, Uvicorn, SQLAlchemy 2 with synchronous
+psycopg 3, and Alembic are locked in the server workspace. Migrations reach
+`0004_audit_records`; local SQLite migration smoke passes and PostgreSQL tests
+run in the CI service when `AGENTGUARD_TEST_DATABASE_URL` is configured.
+
 ### Unit 6.2 — CI scan ingestion API
 
 **Goal:** receive scan results from CI safely and make them queryable.
@@ -185,6 +192,12 @@ not import the server package.
 **Acceptance:** the same upload can be retried without duplicate findings;
 different repositories cannot read each other's data; malformed uploads return
 clear 4xx responses.
+
+**Status:** implemented as the initial contract. JSON and SARIF ingestion,
+field/path validation, declared payload limits, repository-scoped reads,
+pagination, deterministic ordering, and scan-key idempotency are covered by
+server tests. The production CI worker and richer plugin/configuration payload
+ingestion remain follow-up work.
 
 ### Unit 6.3 — Authentication, authorization, and data protection
 
@@ -207,6 +220,12 @@ error responses.
 **Risk:** authentication is security-critical and should not be replaced with
 temporary development behavior in a production path.
 
+**Status:** implemented as an environment-managed service-token foundation.
+Bearer tokens, scope/repository isolation, request IDs, redacted audit records,
+rate limiting, retention deletion helpers, and negative authorization tests are
+present. A production identity provider, token rotation, shared rate limiter,
+and backup/export operations remain deployment work.
+
 ### Unit 6.4 — GitHub App and pull-request scans
 
 **Goal:** run or receive scans for pull requests and report only actionable
@@ -225,6 +244,12 @@ changes.
 **Acceptance:** signed events create one idempotent scan; invalid signatures
 are rejected; a pull request receives deterministic findings tied to its commit
 and repository.
+
+**Status:** implemented through the webhook boundary. HMAC verification,
+delivery replay claims, supported PR action parsing, queued commit-pinned scan
+creation, and deterministic idempotency keys are covered. A worker that runs
+AgentGuard and publishes GitHub Check Runs/SARIF annotations is not included in
+this local foundation.
 
 ### Unit 6.5 — Dashboard
 
@@ -253,6 +278,11 @@ web/
 **Acceptance:** browser smoke tests cover the primary repository and finding
 flows; the frontend does not bypass backend authorization.
 
+**Status:** implemented as the initial Next.js dashboard. TypeScript and a
+production build pass; repository, scan, finding, trend, and explicit empty/
+loading/forbidden/unavailable/error states are present. Browser automation is a
+release follow-up because no browser test runner is currently pinned.
+
 ### Unit 6.6 — Badge and public reporting
 
 **Goal:** provide a useful badge without leaking private repository data.
@@ -267,6 +297,11 @@ flows; the frontend does not bypass backend authorization.
 
 **Acceptance:** private repositories never become readable through badge
 endpoints; badge results are deterministic and cache-safe.
+
+**Status:** implemented. Badges require global enablement plus repository
+opt-in, expose only aggregate severity/risk state, and use deterministic ETags
+and cache controls for available, stale, missing, private, and unavailable
+states.
 
 ### Unit 6.7 — Release and distribution
 
@@ -284,6 +319,15 @@ endpoints; badge results are deterministic and cache-safe.
 
 **Acceptance:** a clean environment can install the documented package set,
 run `agentguard --version`, discover plugins, and complete the smoke scan.
+
+**Status:** locally verified for root and server wheels/source distributions,
+the locked Python environment, the locked dashboard dependency graph, and the
+dashboard production build under Node 20. Docker image execution, PostgreSQL
+CI, supported Python matrix evidence, trusted publishing, and browser smoke
+tests still need an external release run. The owner-reported Docker Compose
+smoke run completed with PostgreSQL healthy, migrations applied, and `/healthz`
+and `/readyz` returning HTTP 200; this remains a reproducibility check until it
+is attached to a clean CI/release run.
 
 ## Issue register
 
@@ -488,14 +532,14 @@ first; defer dashboard, App, and badges until the service is secure and useful.
 - [ ] `make check` passes on the supported Python matrix.
 - [ ] Root and standalone package ownership is finalized.
 - [ ] Clean-install plugin discovery is tested.
-- [ ] The 10,000-line performance target is measured.
-- [ ] Corpus scans and false-positive notes are current.
-- [ ] No credentials or private payloads appear in fixtures, logs, caches, or
-      documentation.
-- [ ] Triage disclosure and provider trust warnings are visible.
-- [ ] GitHub webhook verification is tested before enabling the App.
-- [ ] PostgreSQL migrations and backup/retention policy are documented before
-      storing user scans.
+- [x] The 10,000-line performance target is measured.
+- [x] Corpus scans and false-positive notes are current.
+- [x] No credentials or private payloads appear in fixtures, logs, caches, or
+       documentation.
+- [x] Triage disclosure and provider trust warnings are visible.
+- [x] GitHub webhook verification is tested before enabling the App.
+- [x] PostgreSQL migrations and retention policy are documented before
+       storing user scans.
 - [ ] Release artifacts are built from CI and verified in a clean environment.
 - [ ] The README installation and demo path work from a fresh clone.
 

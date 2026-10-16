@@ -77,3 +77,6 @@ jobs:
 
       - name: Check dashboard types
         run: npm test
+
+      - name: Build dashboard
+        run: npm run build
