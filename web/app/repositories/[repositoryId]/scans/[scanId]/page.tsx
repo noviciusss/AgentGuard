@@ -11,12 +11,13 @@ interface ScanPageProps {
   params: { repositoryId: string; scanId: string };
 }
 
+export const dynamic = "force-dynamic";
+
 const formatDate = (value: string): string =>
   new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 
-export async function generateMetadata({ params }: ScanPageProps) {
-  const result = await loadApi(() => getScan(params.scanId));
-  return { title: result.status === "success" ? result.data.scanKey : "Scan" };
+export function generateMetadata() {
+  return { title: "Scan" };
 }
 
 export default async function ScanPage({ params }: ScanPageProps) {

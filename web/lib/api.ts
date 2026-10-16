@@ -236,13 +236,15 @@ const messageFromDetails = (details: unknown): string | null => {
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = forwardedRequestHeaders();
   headers.set("accept", "application/json");
+  const signal = init?.signal ?? AbortSignal.timeout(5_000);
 
   try {
     const response = await fetch(`${apiBaseUrl()}${path}`, {
       ...init,
       cache: "no-store",
       credentials: "include",
-      headers
+      headers,
+      signal
     });
 
     if (!response.ok) {

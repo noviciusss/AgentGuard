@@ -12,16 +12,15 @@ interface RepositoryPageProps {
   params: { repositoryId: string };
 }
 
+export const dynamic = "force-dynamic";
+
 const formatDate = (value: string | null): string => {
   if (!value) return "No scan yet";
   return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(value));
 };
 
-export async function generateMetadata({ params }: RepositoryPageProps) {
-  const result = await loadApi(() => getRepository(params.repositoryId));
-  return {
-    title: result.status === "success" ? result.data.fullName : "Repository"
-  };
+export function generateMetadata() {
+  return { title: "Repository" };
 }
 
 export default async function RepositoryPage({ params }: RepositoryPageProps) {

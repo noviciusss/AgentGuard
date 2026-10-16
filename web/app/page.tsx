@@ -5,6 +5,7 @@ import { StatePanel } from "@/components/state-panel";
 import { getRepositories, loadApi } from "@/lib/api";
 
 export const metadata = { title: "Repositories" };
+export const dynamic = "force-dynamic";
 
 export default async function RepositoriesPage() {
   const result = await loadApi(() => getRepositories());

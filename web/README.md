@@ -10,6 +10,7 @@ not generate an API client. The request and response contract lives in
 From this directory:
 
 ```bash
+nvm use 20.17.0
 npm install
 AGENTGUARD_API_URL=http://localhost:8000 npm run dev
 ```
@@ -22,13 +23,22 @@ the service; it does not implement or bypass authorization itself.
 ## Checks
 
 ```bash
-npm test       # strict TypeScript check, no generated files
-npm run build  # production Next.js build
+npm test       # required strict TypeScript check
+npm run build  # production Next.js build; run npm test first
 ```
+
+The production build skips duplicate TypeScript and ESLint work inside the
+Next.js worker. `npm test` remains the required strict type gate before a build
+or deployment; this avoids long-running worker hangs on WSL-mounted drives.
 
 There is no test framework or generated-code step in this scaffold. The `test`
 script is the lightweight contract check until browser smoke tests are added
 with the dashboard's backend-authenticated integration environment.
+
+The repository pins Node through the root `.nvmrc`. Next production builds use
+one build worker (`experimental.cpus = 1`) because parallel Next workers can
+hang on WSL-mounted filesystems. This is a build-performance/reproducibility
+setting, not a replacement for `npm test`.
 
 ## API contract used by the scaffold
 
