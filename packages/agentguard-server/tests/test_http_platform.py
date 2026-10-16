@@ -181,6 +181,11 @@ async def test_public_badge_and_github_webhook_are_privacy_safe_and_idempotent()
                 "/api/v1/github/webhook", content=raw, headers=webhook_headers
             )
             assert accepted.status_code == 202
+            queued_scan = await client.get(
+                f"/api/v1/scans/{accepted.json()['scan_id']}"
+            )
+            assert queued_scan.status_code == 200
+            assert queued_scan.json()["status"] == "queued"
             replay = await client.post(
                 "/api/v1/github/webhook", content=raw, headers=webhook_headers
             )

@@ -158,6 +158,26 @@ def test_sarif_import_maps_results_to_the_ingestion_contract() -> None:
     assert payload.findings[0].severity == "error"
 
 
+def test_scan_contract_rejects_path_traversal_and_invalid_repository_ids() -> None:
+    with pytest.raises(ValueError, match="owner/name"):
+        ScanIngestRequest.model_validate(
+            _payload("bad-repository", "fp").model_dump()
+            | {"repository": {"provider": "github", "full_name": "../private"}}
+        )
+    with pytest.raises(ValueError, match="relative POSIX path"):
+        ScanIngestRequest.model_validate(
+            _payload("bad-file", "fp").model_dump()
+            | {
+                "findings": [
+                    {
+                        **_payload("bad-file", "fp").model_dump()["findings"][0],
+                        "file": "../secret.py",
+                    }
+                ]
+            }
+        )
+
+
 @pytest.mark.anyio
 async def test_http_ingestion_rejects_invalid_payload_and_returns_health() -> None:
     if TEST_DATABASE_URL is None:

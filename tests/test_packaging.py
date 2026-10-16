@@ -40,3 +40,23 @@ def test_distribution_documentation_describes_mutually_exclusive_profiles() -> N
     assert "Profile A: bundled CLI" in documentation
     assert "Profile B: core plus selected plugins" in documentation
     assert "not intended to be installed together" in documentation
+
+
+def test_server_distribution_is_separate_from_offline_core() -> None:
+    metadata = _metadata("packages/agentguard-server/pyproject.toml")
+
+    assert 'name = "agentguard-server"' in metadata
+    assert '"fastapi>=0.115,<1"' in metadata
+    assert '"psycopg[binary]>=3.2,<4"' in metadata
+    assert '"sqlalchemy>=2,<3"' in metadata
+    assert '"alembic>=1.13,<2"' in metadata
+    assert "agentguard-core" not in metadata
+
+
+def test_dashboard_has_a_locked_node_dependency_graph() -> None:
+    package = _metadata("web/package.json")
+    lockfile = ROOT / "web/package-lock.json"
+
+    assert '"scripts"' in package
+    assert '"test": "tsc --noEmit"' in package
+    assert lockfile.exists()

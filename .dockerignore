@@ -1,0 +1,15 @@
+.git
+.github
+.venv
+.venvs
+__pycache__
+*.py[cod]
+.mypy_cache
+.pytest_cache
+.ruff_cache
+build
+dist
+web/node_modules
+web/.next
+web/tsconfig.tsbuildinfo
+*.log

@@ -43,7 +43,9 @@ class RequestSafetyMiddleware(BaseHTTPMiddleware):
         settings = request.app.state.settings
         incoming_length = request.headers.get("content-length")
         try:
-            content_length = int(incoming_length) if incoming_length is not None else None
+            content_length = (
+                int(incoming_length) if incoming_length is not None else None
+            )
         except ValueError:
             content_length = None
         if content_length is not None and content_length > settings.max_payload_bytes:

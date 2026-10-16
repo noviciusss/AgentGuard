@@ -22,10 +22,17 @@ from agentguard_server.db import SessionFactory
 from agentguard_server.github import (
     GitHubWebhookConfig,
     GitHubWebhookError,
+    PullRequestEvent,
     SqlAlchemyDeliveryReplayStore,
     process_pull_request_webhook,
 )
-from agentguard_server.models import Repository, Scan, WebhookDelivery
+from agentguard_server.models import (
+    Branch,
+    Commit,
+    Repository,
+    Scan,
+    WebhookDelivery,
+)
 
 router = APIRouter()
 
@@ -34,6 +41,64 @@ def _session(request: Request) -> Session:
     """Open a short-lived session for public platform endpoints."""
     factory = cast(SessionFactory, request.app.state.session_factory)
     return factory()
+
+
+def _queue_pull_request_scan(session: Session, event: PullRequestEvent) -> Scan:
+    """Create or return the queued scan represented by a normalized PR event."""
+    repository_name = event.repository
+    pull_request_number = event.pull_request_number
+    head_sha = event.head_sha
+    idempotency_key = event.idempotency_key
+    existing = session.scalar(select(Scan).where(Scan.scan_key == idempotency_key))
+    if existing is not None:
+        return existing
+    repository = session.scalar(
+        select(Repository).where(
+            Repository.provider == "github",
+            Repository.full_name == repository_name,
+        )
+    )
+    if repository is None:
+        repository = Repository(provider="github", full_name=repository_name)
+        session.add(repository)
+        session.flush()
+    branch_name = f"pull/{pull_request_number}"
+    branch = session.scalar(
+        select(Branch).where(
+            Branch.repository_id == repository.id,
+            Branch.name == branch_name,
+        )
+    )
+    if branch is None:
+        branch = Branch(repository_id=repository.id, name=branch_name)
+        session.add(branch)
+        session.flush()
+    commit = session.scalar(
+        select(Commit).where(
+            Commit.repository_id == repository.id,
+            Commit.sha == head_sha,
+        )
+    )
+    if commit is None:
+        commit = Commit(repository_id=repository.id, sha=head_sha)
+        session.add(commit)
+        session.flush()
+    scan = Scan(
+        scan_key=idempotency_key,
+        repository_id=repository.id,
+        branch_id=branch.id,
+        commit_id=commit.id,
+        status="queued",
+        analyzer_version="github-app",
+        details={
+            "pull_request": pull_request_number,
+            "head_sha": head_sha,
+            "source": "github-webhook",
+        },
+    )
+    session.add(scan)
+    session.flush()
+    return scan
 
 
 @router.get("/api/v1/badges/{repository_id}.{format}")
@@ -118,10 +183,12 @@ async def github_webhook(request: Request) -> dict[str, str]:
                 delivery.event_name = event.event_name
                 delivery.idempotency_key = event.idempotency_key
                 delivery.payload_sha256 = hashlib.sha256(raw).hexdigest()
+        queued_scan = _queue_pull_request_scan(session, event)
         session.commit()
     return {
         "status": "accepted",
         "idempotency_key": event.idempotency_key,
         "repository": event.repository,
         "head_sha": event.head_sha,
+        "scan_id": str(queued_scan.id),
     }

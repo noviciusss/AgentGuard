@@ -611,7 +611,9 @@ async def ingest_sarif(
             analyzer_version=analyzer_version,
         )
     except ValidationError as error:
-        raise HTTPException(status_code=422, detail="SARIF finding is invalid") from error
+        raise HTTPException(
+            status_code=422, detail="SARIF finding is invalid"
+        ) from error
     return ingest_scan(payload, response, session, principal)
 
 
