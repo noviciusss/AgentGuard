@@ -11,12 +11,12 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "agentguard",
+    "agentguard-linter",
     "agentguard-server",
 ]
 
 [[package]]
-name = "agentguard"
+name = "agentguard-linter"
 source = { editable = "." }
 dependencies = [
     { name = "libcst" },
