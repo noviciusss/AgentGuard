@@ -3,7 +3,7 @@ requires = ["hatchling>=1.27,<2"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentguard"
+name = "agentguard-linter"
 dynamic = ["version"]
 description = "Static analysis for reliability, cost, and security bugs in AI agents"
 readme = "README.md"
