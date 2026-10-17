@@ -214,9 +214,74 @@ def scan_command(
     rendered = reporter.render(result.findings)
     if output is not None:
         output.write_text(rendered, encoding="utf-8")
+    elif report_format == "text":
+        _print_rich_findings(result.findings)
     elif rendered:
         typer.echo(rendered, nl=False)
     raise typer.Exit(code=_exit_code(result.findings, config.fail_on))
+
+
+def _print_rich_findings(findings: tuple[Finding, ...]) -> None:
+    from rich.console import Console
+
+    console = Console()
+    sorted_items = sort_findings(list(findings))
+    if not sorted_items:
+        return
+
+    for finding in sorted_items:
+        location = finding.loc
+        sev = finding.severity
+        if sev == Severity.ERROR:
+            sev_badge = "[bold white on red] ERROR [/]"
+        elif sev == Severity.WARNING:
+            sev_badge = "[bold black on yellow] WARN  [/]"
+        else:
+            sev_badge = "[bold white on blue] INFO  [/]"
+
+        path_str = location.file.as_posix()
+        line_num = location.line
+        col_num = location.col
+        loc_str = f"[bold cyan]{path_str}[/]:[yellow]{line_num}[/]:[dim]{col_num}[/]"
+        rule_str = f"[bold magenta]{finding.rule_id}[/]"
+        conf_str = f"[dim]({finding.confidence.value})[/]"
+
+        console.print(f"{sev_badge} {loc_str} {rule_str} {conf_str}")
+        console.print(f"  [bold white]{finding.message}[/]")
+        console.print(f"  [dim]why:[/] [white]{finding.why}[/]")
+        console.print(f"  [bold green]fix:[/] [green]{finding.suggestion}[/]")
+        if finding.tags:
+            tag_badges = " ".join(f"[bold cyan]{t}[/]" for t in finding.tags)
+            console.print(f"  [dim]tags:[/] {tag_badges}")
+        if finding.metadata:
+            metadata = ", ".join(
+                f"[dim]{k}=[/]{v}" for k, v in sorted(finding.metadata)
+            )
+            console.print(f"  [dim]metadata:[/] {metadata}")
+        console.print()
+
+    errors = sum(1 for f in sorted_items if f.severity == Severity.ERROR)
+    warnings = sum(1 for f in sorted_items if f.severity == Severity.WARNING)
+    infos = sum(1 for f in sorted_items if f.severity == Severity.INFO)
+    parts: list[str] = []
+    if errors:
+        parts.append(f"[bold red]{errors} error{'s' if errors > 1 else ''}[/]")
+    if warnings:
+        parts.append(f"[bold yellow]{warnings} warning{'s' if warnings > 1 else ''}[/]")
+    if infos:
+        parts.append(f"[bold blue]{infos} info[/]")
+    counts_str = ", ".join(parts) if parts else "0 issues"
+    num_files = len({f.loc.file for f in sorted_items})
+    s_findings = "s" if len(sorted_items) > 1 else ""
+    s_files = "s" if num_files > 1 else ""
+    summary_text = (
+        f"Found {len(sorted_items)} finding{s_findings} "
+        f"({counts_str}) across {num_files} file{s_files}"
+    )
+    if errors:
+        console.print(f"[bold red][X] {summary_text}[/]")
+    else:
+        console.print(f"[bold yellow][!] {summary_text}[/]")
 
 
 def _rule_context(
