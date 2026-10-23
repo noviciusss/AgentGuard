@@ -1,171 +1,274 @@
 # AgentGuard
 
-AgentGuard is a static analysis CLI for AI agent codebases. It finds reliability,
-cost, and security bugs in agent graphs, tool calls, retries, and LLM calls
-before an agent runs.
+[![CI](https://github.com/noviciusss/AgentGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/noviciusss/AgentGuard/actions)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Checked with mypy](https://img.shields.io/badge/mypy-strict-blue)](https://mypy-lang.org/)
 
-The project ships the normalized Agent IR, generic/LangGraph/CrewAI/AutoGen
-adapters, the plugin system, 15 documented reliability/cost/security rules,
-SARIF and autofix support, and the Phase 5 graph, OWASP, triage, and trace
-plugins.
+**AgentGuard** is a static analysis CLI and hosted security platform for AI agent codebases (LangGraph, CrewAI, AutoGen, and custom Python agents).
 
-## Development setup
+It detects reliability, cost, and security vulnerabilities in agent execution graphs, LLM invocations, retry loops, and tool boundaries **before the agent ever runs**.
 
-AgentGuard requires Python 3.10+ and uses `uv` for environments and
-dependencies. CI targets Python 3.10, 3.11, 3.12, and 3.13. The bootstrap uses
-`uv` 0.13.0 and GNU Make.
+> **Mental Model:** `ruff` + `bandit` + `semgrep`, purpose-built for agent architectures. It catches runaway loops, unhandled tool failures, missing timeouts, unbounded state growth, and prompt injection sinks before deployment.
 
-If you just installed `uv` and the shell cannot find it, open a new terminal
-or add its default install directory to your current shell's path:
+---
 
-```bash
-export PATH="$HOME/.local/bin:$PATH"
+## Architecture
+
+AgentGuard separates source-code parsing and framework semantics from rule evaluation using a normalized **Agent Intermediate Representation (IR)**. Core analysis is completely offline and safe: code is parsed into abstract syntax trees without ever being imported or executed.
+
+### 1. Static Analysis Pipeline
+
+```mermaid
+flowchart LR
+    subgraph Input ["Input Layer"]
+        A[Python Source Code\nLangGraph / CrewAI / AutoGen / Python]
+    end
+
+    subgraph Parsing ["AST & Discovery"]
+        B[File Discovery\nExcludes & .gitignore]
+        C[Safe AST Parser\nstdlib ast · Zero Code Execution]
+    end
+
+    subgraph Adapters ["Framework Adapters"]
+        D1[Generic Python Adapter\nLoops, Calls, Retries, Call Graph]
+        D2[LangGraph Adapter\nStateGraph, Nodes, Edges, Fan-out]
+    end
+
+    subgraph IR ["Normalized Agent IR"]
+        E[(AgentSystem IR\nNodes · Edges · State Keys\nCalls · Loops · Tool Sinks)]
+    end
+
+    subgraph Engine ["Rule & Plugin Engine"]
+        F[Plugin Manager & Registry\nPluggy Extension Boundary]
+        G[Rule Set AG001 - AG023\nReliability · Cost · Security]
+        H[Intelligence Plugins\nOWASP · Graph · Trace · Triage]
+    end
+
+    subgraph Output ["Reporters & Autofix"]
+        I1[Rich Terminal Reporter]
+        I2[Deterministic JSON]
+        I3[SARIF Reporter\nGitHub Code Scanning]
+        I4[LibCST Autofix Engine\nNon-destructive Safe Fixes]
+    end
+
+    A --> B --> C
+    C --> D1 & D2
+    D1 & D2 --> E
+    E --> F
+    F --> G & H
+    G --> I1 & I2 & I3 & I4
 ```
 
-WSL users should keep the virtual environment outside a Windows-mounted
-project directory and use copy mode for dependency links:
+### 2. Full Platform Architecture (CLI, API, & Web Dashboard)
+
+```mermaid
+flowchart TB
+    subgraph Client ["Client & CI / CD Integration"]
+        CLI[AgentGuard CLI\nagentguard scan]
+        GHA[GitHub Actions / Pre-commit\nSARIF Upload & Gatekeeper]
+        GH[GitHub Pull Requests\nWebhooks & Check Runs]
+    end
+
+    subgraph Server ["Hosted Platform Backend (FastAPI)"]
+        API[FastAPI Gateway\n/api/v1/scans · /api/v1/repositories]
+        AUTH[Multi-tenant Token Auth\nScope & Repo Isolation]
+        INGEST[Idempotent Ingestion\nJSON & SARIF De-duplication]
+        WEBHOOK[Webhook Handler\nPR Validation & Fingerprint Match]
+        BADGE[Badge Service\nSVG / JSON Status Badges]
+    end
+
+    subgraph Storage ["Persistence Layer"]
+        DB[(PostgreSQL 16\nSQLAlchemy 2 + Psycopg 3)]
+        MIG[Alembic Migrations\nSchema Versioning]
+    end
+
+    subgraph Frontend ["Web Dashboard"]
+        DASH[Next.js 14 App / React\nLive Scan, Repo, & Finding Views]
+    end
+
+    CLI -->|Upload JSON / SARIF| API
+    GHA -->|Upload Scan Artifacts| API
+    GH -->|POST /api/v1/github/webhook| API
+
+    API --> AUTH --> INGEST
+    API --> WEBHOOK
+    API --> BADGE
+    INGEST --> DB
+    MIG -.-> DB
+    DASH <-->|Query Scans & Repos| API
+```
+
+---
+
+## Key Features
+
+- **100% Offline & Safe Analysis**: Code is inspected purely via Python's `ast` parser. It is **never imported or executed**, and the core scanner makes **zero network requests**.
+- **Agent IR Normalization**: Understands agent-specific constructs: state machines, node transitions, conditional routing, recursion limits, fan-out branches, shared mutable state, and tool schemas.
+- **15 Built-in Specialized Rules**: Comprehensive coverage across agent reliability (deadlocks, infinite loops, unbounded retries), cost explosions (unpinned model aliases, missing budgets), and security vulnerabilities (prompt injection sinks, unsanitized LLM output to shell, hardcoded secrets).
+- **OWASP LLM Top 10 (2025) & CWE Mapping**: Automated tagging of findings against industry-standard AI security taxonomies.
+- **Non-destructive Autofix**: Powered by `libcst`, AgentGuard safely patches missing timeouts, recursion limits, and model pins while preserving existing code formatting and comments.
+- **Mermaid Graph Visualizer (`agentguard graph`)**: Renders normalized state graphs directly from source code into Mermaid diagrams for review and documentation.
+- **Runtime Trace Analyzer (`agentguard trace`)**: Ingests OTLP and LangSmith trace exports to detect repeated runtime loops (`TRACE001`) and execution cost spikes (`TRACE002`).
+- **Hosted Platform & Next.js Dashboard**: Standalone FastAPI server and Next.js 14 web UI with tenant token isolation, audit logging, idempotent ingestion, and GitHub pull request webhooks.
+
+---
+
+## Built-in Detection Rules
+
+| Rule ID | Category | Severity | Name & Summary | Autofix |
+|:---|:---|:---|:---|:---:|
+| **AG001** | Reliability | `error` | **Unbounded Retries**: Retries without explicit max attempts or exponential backoff | No |
+| **AG002** | Reliability | `error` | **Shared Mutable State in Fan-out**: Concurrent fan-out branches mutating shared state keys | No |
+| **AG003** | Reliability | `warning` | **Missing Timeout**: Outbound HTTP or LLM API calls without explicit network timeout | **Yes** |
+| **AG004** | Reliability | `error` | **Unbounded Agent Loop**: Graph invocation or loop missing recursion limits | **Yes** |
+| **AG005** | Cost | `warning` | **Missing Cost Budget**: Agent loop or execution missing cost or token budget limits | No |
+| **AG006** | Reliability | `error` | **Unreachable Graph Node**: Graph node without inbound edges from entry points | No |
+| **AG007** | Reliability | `error` | **Conditional Edge Unmapped Key**: Router returns branch keys missing from path map | No |
+| **AG008** | Reliability | `warning` | **Exception Swallowed in Tool**: Bare `except` or generic error suppression in tool body | No |
+| **AG009** | Reliability | `error` | **Non-Idempotent Tool with Retry**: Destructive tool calls wrapped in retry policies | No |
+| **AG010** | Cost | `warning` | **Unpinned Model Alias**: Floating alias like `gpt-4` or `latest` instead of pinned revision | **Yes** |
+| **AG011** | Cost | `warning` | **Unbounded State Growth**: Appending to state collections without truncation or sliding window | No |
+| **AG020** | Security | `error` | **Prompt Injection Sink**: Untrusted input concatenated directly into system prompt (OWASP LLM01) | No |
+| **AG021** | Security | `error` | **Dangerous Tool Without Human Approval**: Destructive actions (shell, DB drop) without HITL gate (OWASP LLM06/08) | No |
+| **AG022** | Security | `error` | **LLM Output to Dangerous Sink**: Model output piped directly into `eval`, `exec`, or shell (OWASP LLM02) | No |
+| **AG023** | Security | `error` | **Hardcoded Secret**: Exposed API keys, auth tokens, or credentials in agent configuration | No |
+
+*Detailed remediation guides, bad examples, and good examples are available in [`docs/rules/`](docs/rules/) or via `agentguard explain <ID>`.*
+
+---
+
+## Quick Start
+
+### Installation
+
+AgentGuard requires Python 3.10+ and recommends `uv` for reproducible environments:
 
 ```bash
-export UV_LINK_MODE=copy
-export UV_PROJECT_ENVIRONMENT="$HOME/.venvs/agentguard"
+# Clone the repository
+git clone https://github.com/noviciusss/AgentGuard.git
+cd AgentGuard
+
+# Sync locked environment with all extras
 uv sync --locked --all-extras
 ```
 
-Install the locked environment and run the complete local check suite with:
+### Running Scans
+
+Scan your codebase or bundled examples:
 
 ```bash
-uv sync --locked --all-extras
-make check
+# Scan a directory
+uv run agentguard scan examples/
+
+# Run scan with text or JSON formatting
+uv run agentguard scan src/ --format text
+uv run agentguard scan src/ --format json --output findings.json
+
+# Filter by rule, severity, or confidence
+uv run agentguard scan src/ \
+  --select AG001,AG00* \
+  --ignore AG003 \
+  --min-severity warning \
+  --min-confidence medium \
+  --fail-on error
 ```
 
-`make install` also installs the locked dependencies, using the same
-environment as the check targets. The Makefile exports both WSL settings;
-export them in your shell as above when running `uv` directly. All check
-targets include the development dependencies automatically.
-
-Keep `uv.lock` in version control. For intentional dependency updates, run
-`uv lock --upgrade`, review the lockfile changes, and run `make check`.
-
-## Quick start
-
-Check the installed version:
+### Inspecting Rules & Remediation Guidance
 
 ```bash
-uv run --locked agentguard --version
-uv run --locked python -m agentguard --version
+# List all registered rules and metadata
+uv run agentguard rules
+
+# Explain specific rule with code examples and fix guidance
+uv run agentguard explain AG003
+
+# List active plugins
+uv run agentguard plugins list
 ```
 
-Scan the bundled examples without failing the shell command on findings:
+### Autofix with LibCST
+
+Preview changes non-destructively:
 
 ```bash
-uv run --locked agentguard scan examples/ --fail-on never
+# Preview diffs without modifying files
+uv run agentguard scan src/ --fix-dry-run
+
+# Apply safe fixes directly (e.g., adding timeouts or recursion limits)
+uv run agentguard scan src/ --fix
 ```
 
-The support bot and plain Python agent intentionally contain findings. The
-clean agent should produce no findings:
+### Agent Graph Visualization
+
+Extract the state machine and render a Mermaid graph:
 
 ```bash
-uv run --locked agentguard scan examples/clean_agent --format json --fail-on never
+# Output Mermaid diagram to stdout or file
+uv run agentguard graph examples/langgraph_support_bot --output graph.mmd
 ```
 
-List the built-in rules or read a rule's remediation guidance:
+### Runtime Trace Analysis
+
+Analyze execution traces for loops or cost spikes:
 
 ```bash
-uv run --locked agentguard rules
-uv run --locked agentguard explain AG003
-uv run --locked agentguard plugins list
-uv run --locked agentguard baseline create examples/ --output baseline.json
-uv run --locked agentguard graph examples/langgraph_support_bot
-uv run --locked agentguard trace path/to/local-trace.json
+# Scan OTLP / LangSmith trace JSON exports
+uv run agentguard trace path/to/trace.json
 ```
 
-Useful scan options include:
+### Baseline Creation
 
-```text
-agentguard scan [PATHS...] --format text|json
-    --select AG001,AG00* --ignore AG003
-    --min-severity info|warning|error
-    --min-confidence low|medium|high
-    --fail-on error|warning|never
-    --jobs N --output FILE --no-cache
+Suppress existing legacy findings and fail CI only on newly introduced bugs:
+
+```bash
+# Generate a baseline snapshot
+uv run agentguard baseline create src/ --output .agentguard-baseline.json
+
+# Scan against the baseline
+uv run agentguard scan src/ --baseline .agentguard-baseline.json
 ```
 
-Phase 5 commands:
+### Inline Suppressions
 
-```text
-agentguard graph PATH [--output FILE]                 # Mermaid normalized IR
-agentguard trace TRACE.json [--output FILE]           # loops and cost spikes
-agentguard triage --input FINDINGS.json               # explicit provider needed
-    --source-root PROJECT --provider module:factory
-    [--cache FILE]
-```
-
-`agentguard triage` can send redacted source snippets to arbitrary provider
-code, so use it only with a provider you trust. It never runs during `scan`
-and does not change finding severity.
-
-The scanner parses source without importing or executing it. A syntax error is
-reported as a warning and the remaining files continue to scan. Findings are
-deterministically sorted and can be suppressed inline:
+Suppress specific warnings with an audit reason in code review:
 
 ```python
-requests.get(url)  # agentguard: ignore[AG003] reason: gateway adds timeout
+# agentguard: ignore[AG003] reason: network gateway injects default timeout
+response = requests.get(url)
 ```
 
-See [the architecture guide](docs/architecture.md) and the individual pages in
-[`docs/rules/`](docs/rules/) for the IR pipeline and rule-specific guidance.
-See [the CI guide](docs/ci.md) for GitHub and pre-commit integration, and
-[the autofix guide](docs/autofix.md) for safe dry-run and apply behavior.
-See [the distribution guide](docs/distribution.md) for bundled and standalone
-installation profiles. Do not install both profiles into the same environment.
+---
 
-## Phase 6 platform development
+## Phase 6 Hosted Platform & Dashboard
 
-The hosted platform is split from the offline analyzer. The server package is
-`packages/agentguard-server` and uses FastAPI, SQLAlchemy 2, psycopg 3, and
-Alembic. The core CLI does not import the server or require PostgreSQL.
+AgentGuard includes an optional enterprise platform: a standalone FastAPI REST backend, PostgreSQL storage with Alembic migrations, and a Next.js 14 web dashboard.
 
-### Start everything with Docker Compose
+### Quick Start with Docker Compose
 
-Docker Compose is the recommended local platform setup. It starts PostgreSQL,
-applies the Alembic migrations, and starts the FastAPI service. The database is
-stored in the named `agentguard-postgres` volume and the API is exposed on port
-`8000`. PostgreSQL is exposed on port `5432` so local integration tests can use
-the same database.
+The fastest way to launch the full platform locally:
 
 ```bash
+# Prepare environment variables
 cp .env.example .env
+
+# Build and start PostgreSQL (port 5432) and FastAPI (port 8000)
 docker compose up --build
 ```
 
-Verify the services from a second terminal:
+Verify service readiness:
 
 ```bash
 curl -fsS http://localhost:8000/healthz
-curl -fsS http://localhost:8000/readyz
-curl -fsS http://localhost:8000/openapi.json > /tmp/agentguard-openapi.json
+# Output: {"status":"ok","service":"agentguard-server"}
 ```
 
-Expected health output is:
+Explore the interactive API contract at [http://localhost:8000/docs](http://localhost:8000/docs).
 
-```json
-{"status":"ok","service":"agentguard-server"}
-```
+### Running the Next.js Dashboard
 
-Open the interactive API contract at <http://localhost:8000/docs>. Stop the
-services without deleting the database with:
-
-```bash
-docker compose down
-```
-
-Use `docker compose down -v` only when intentionally resetting the local
-database. The web dashboard is a separate process and is started below.
-
-### Run the dashboard
-
-The Next.js dashboard lives under `web/` and reads the backend URL from
-`AGENTGUARD_API_URL`:
+The dashboard provides a unified view of monitored repositories, scan histories, and detailed finding breakdowns:
 
 ```bash
 cd web
@@ -173,189 +276,96 @@ npm ci
 AGENTGUARD_API_URL=http://localhost:8000 npm run dev
 ```
 
-Open <http://localhost:3000>. The dashboard has repository, scan, and finding
-views plus explicit loading, empty, API-unavailable, forbidden, and error
-states. Its API client forwards only the incoming `Authorization` and `Cookie`
-headers; authorization remains a backend responsibility.
+Open [http://localhost:3000](http://localhost:3000) to view the web dashboard.
 
-Run dashboard checks from `web/`:
+### API Ingestion & CI Integration
 
-```bash
-npm test       # strict TypeScript check
-npm run build  # production Next.js build
-npm start      # serve the production build
-```
-
-### Run the API with an existing PostgreSQL instance
-
-Docker is not required if you already have PostgreSQL. Set the connection URL
-in the shell, apply migrations, and start Uvicorn:
+Submit findings directly from GitHub Actions or CI runners:
 
 ```bash
-export AGENTGUARD_DATABASE_URL='postgresql+psycopg://USER:PASSWORD@HOST:5432/DB'
-export AGENTGUARD_CORS_ORIGINS='http://localhost:3000'
-
-uv run --locked --all-extras --package agentguard-server alembic \
-  -c packages/agentguard-server/alembic.ini upgrade head
-
-uv run --locked --all-extras --package agentguard-server uvicorn \
-  agentguard_server.main:app --host 127.0.0.1 --port 8000
-```
-
-Never put a real password, token, private key, or webhook secret in the
-repository. Use environment variables, a local secret manager, or Docker
-secrets. `.env.example` contains placeholders only.
-
-### Submit and query a scan
-
-The JSON ingestion endpoint is idempotent by `scan_key`. Repeating the same
-request returns the existing scan rather than inserting duplicate findings.
-
-```bash
+# Ingest JSON scan report (idempotent by scan_key)
 curl -X POST http://localhost:8000/api/v1/scans \
   -H 'Content-Type: application/json' \
   -d '{
-    "scan_key": "local-scan-1",
-    "repository": {"provider": "github", "full_name": "acme/demo"},
+    "scan_key": "ci-run-1042",
+    "repository": {"provider": "github", "full_name": "acme/agent-fleet"},
     "branch": "main",
-    "commit": {"sha": "abc123"},
+    "commit": {"sha": "9f83a21"},
     "analyzer_version": "0.1.0",
     "findings": []
   }'
-```
 
-Useful read endpoints are:
-
-```text
-GET /api/v1/repositories?page=1&page_size=50
-GET /api/v1/repositories/{repository_id}
-GET /api/v1/repositories/{repository_id}/scans?page=1&page_size=20
-GET /api/v1/scans/{scan_id}
-GET /api/v1/scans?page=1&page_size=50
-```
-
-SARIF uploads use the same persistence and idempotency path. The repository,
-branch, commit, analyzer version, and scan key are explicit query parameters:
-
-```bash
+# Ingest standard SARIF scan output
 curl -X POST \
-  'http://localhost:8000/api/v1/scans/sarif?scan_key=ci-123&repository=acme%2Fdemo&branch=main&commit_sha=abc123&analyzer_version=0.1.0' \
+  "http://localhost:8000/api/v1/scans/sarif?scan_key=ci-1043&repository=acme%2Fagent-fleet&branch=main&commit_sha=9f83a21&analyzer_version=0.1.0" \
   -H 'Content-Type: application/json' \
-  --data-binary @results.sarif
+  --data-binary @agentguard-results.sarif
 ```
 
-The server validates repository identifiers, relative source paths, finding
-severity/confidence, source ranges, field lengths, duplicate fingerprints, and
-the declared request size before persisting data.
+---
 
-### Configure development authentication
+## Development & Testing
 
-Authentication is optional for local development. To require bearer tokens:
+### WSL & Environment Setup
+
+WSL Ubuntu users should set the following environment variables to ensure optimal file I/O and cross-filesystem safety:
 
 ```bash
-export AGENTGUARD_AUTH_REQUIRED=true
-export AGENTGUARD_API_TOKENS='ci-token=ci;read|write;acme/demo'
+export UV_LINK_MODE=copy
+export UV_PROJECT_ENVIRONMENT="$HOME/.venvs/agentguard"
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-The token format is:
+### Verification Commands
 
-```text
-token=subject;scope1|scope2;repository1|repository2
-```
-
-Then call protected endpoints with:
+All changes must pass strict validation before committing:
 
 ```bash
-curl http://localhost:8000/api/v1/repositories \
-  -H 'Authorization: Bearer ci-token'
-```
-
-`read` and `write` scopes are enforced, and repository scopes provide tenant
-isolation. Cross-repository access returns a generic `404` rather than
-revealing whether another repository exists. The service adds an `X-Request-ID`
-response header, limits declared request size, rate-limits clients, and stores
-redacted audit details. The default rate limiter and audit fallback are
-process-local development implementations; production replicas need shared
-operational services.
-
-### GitHub webhooks and badges
-
-Configure a webhook secret before enabling the GitHub endpoint:
-
-```bash
-export AGENTGUARD_GITHUB_WEBHOOK_SECRET='replace-with-a-secret'
-```
-
-`POST /api/v1/github/webhook` accepts signed GitHub `pull_request` events for
-`opened`, `synchronize`, and `reopened`. It verifies `X-Hub-Signature-256`,
-claims delivery IDs to reject replays, and creates one queued scan tied to the
-pull-request head commit. A background worker that executes queued scans and
-publishes Check Runs is not included in this foundation.
-
-Badges require both `AGENTGUARD_PUBLIC_BADGES=true` and the repository's
-`badge_public` flag. They expose only aggregate risk state and severity counts:
-
-```text
-GET /api/v1/badges/{repository_id}.svg
-GET /api/v1/badges/{repository_id}.json
-```
-
-Private repositories return `404`, and public responses use deterministic ETags
-and cache headers without source snippets or finding messages.
-
-### Run tests and migrations
-
-Install all locked Python workspace dependencies:
-
-```bash
+# Install locked workspace dependencies
 uv sync --locked --all-extras --all-packages
-```
 
-Run the complete Python check suite:
-
-```bash
+# Run full test, lint, and type check suite
 make check
+
+# Individual verification targets
+make test         # Run pytest test suite
+make lint         # Run ruff check and format check
+make fmt          # Auto-format code with ruff
+make types        # Strict typecheck with mypy
+make server-test  # Run FastAPI server integration suite
 ```
 
-`make check` runs Ruff lint/format checks, strict mypy, the root tests, and the
-server tests. PostgreSQL-specific tests run when
-`AGENTGUARD_TEST_DATABASE_URL` is set; otherwise only those integration tests
-are skipped:
+---
 
-```bash
-export AGENTGUARD_TEST_DATABASE_URL='postgresql+psycopg://agentguard:agentguard@localhost:5432/agentguard'
-make server-test
+## Repository Structure
+
+```text
+agentguard/
+├── packages/
+│   ├── agentguard-core/          # Core CLI, AST engine, IR models, 15 rules, autofix
+│   ├── agentguard-langgraph/     # LangGraph adapter & framework recognizer
+│   ├── agentguard-graph/         # Mermaid diagram generator plugin
+│   ├── agentguard-owasp/         # OWASP LLM Top 10 (2025) & CWE tagging plugin
+│   ├── agentguard-llm-triage/    # Redacted local source LLM triage plugin
+│   ├── agentguard-trace/         # LangSmith & OTLP runtime trace analyzer
+│   └── agentguard-server/        # Hosted FastAPI server, SQLAlchemy 2, Alembic
+├── web/                          # Next.js 14 web dashboard
+├── docs/
+│   ├── architecture.md           # In-depth architectural design
+│   ├── ci.md                     # GitHub Actions & pre-commit integration
+│   ├── autofix.md                # LibCST autofix specification
+│   ├── server.md                 # Hosted server endpoints and security model
+│   └── rules/                    # Comprehensive docs for AG001 - AG023
+├── examples/                     # Sample agentic codebases (clean & buggy)
+├── tests/                        # Comprehensive unit & fixture test suites
+├── Dockerfile                    # Server container definition
+├── docker-compose.yml            # Local PostgreSQL + FastAPI orchestration
+├── Makefile                      # Standardized build and test targets
+└── pyproject.toml                # UV monorepo workspace configuration
 ```
 
-Apply or inspect migrations directly:
-
-```bash
-AGENTGUARD_DATABASE_URL='postgresql+psycopg://USER:PASSWORD@HOST:5432/DB' \
-  uv run --locked --all-extras --package agentguard-server alembic \
-  -c packages/agentguard-server/alembic.ini upgrade head
-
-uv run --locked --all-extras --package agentguard-server alembic \
-  -c packages/agentguard-server/alembic.ini current
-```
-
-The current migration head is `0004_audit_records`.
-
-### Package and release checks
-
-Build the root CLI and standalone server distributions outside the repository:
-
-```bash
-uv build --out-dir /tmp/omnirush/agentguard-build-root
-uv build --directory packages/agentguard-server \
-  --out-dir /tmp/omnirush/agentguard-build-server
-```
-
-The supported Python CI matrix is 3.10, 3.11, 3.12, and 3.13. GitHub Actions
-also runs the PostgreSQL-backed server suite and the dashboard TypeScript and
-production-build checks. See [`docs/server.md`](docs/server.md) for the full
-server contract, [`docs/distribution.md`](docs/distribution.md) for package
-profiles, and [`web/README.md`](web/README.md) for the dashboard contract.
+---
 
 ## License
 
-AgentGuard is released under the MIT license. See [LICENSE](LICENSE).
+AgentGuard is open-source software licensed under the [MIT License](LICENSE).

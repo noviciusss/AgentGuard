@@ -618,7 +618,15 @@ The detailed register is in `docs/ROADMAP_AND_ISSUES.md`.
 - The owner-reported Docker Compose smoke run built the server image, waited for
   PostgreSQL health, applied all four migrations, and returned HTTP 200 from
   `/healthz` and `/readyz`. The live API docs were available at `/docs`.
-- GitHub CI now runs both `npm test` and `npm run build` for the dashboard job.
+## Completed in Documentation Refresh
+
+- Overhauled `README.md` with rich executive summary and mental model
+- Added Mermaid architecture diagram for the core static analysis pipeline
+- Added Mermaid architecture diagram for the hosted platform, API, and web dashboard
+- Added comprehensive built-in detection rules matrix (AG001–AG023) with categories, severities, and autofix indicators
+- Added full CLI command documentation (`scan`, `rules`, `explain`, `graph`, `trace`, `triage`, `baseline`, autofix)
+- Added hosted platform deployment guide (Docker Compose, standalone PostgreSQL, Next.js dashboard, API endpoints, webhooks)
+- Verified `make lint` and `make types` pass cleanly with zero warnings/errors across 118 source files.
 
 ## Known issues
 

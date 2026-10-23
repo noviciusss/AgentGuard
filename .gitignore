@@ -17,6 +17,7 @@ build/
 coverage.xml
 dist/
 htmlcov/
+video/
 
 # Local configuration and secrets
 .env
